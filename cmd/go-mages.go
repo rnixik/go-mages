@@ -65,9 +65,9 @@ func main() {
 	http.HandleFunc("/", serveIndexPage)
 	if *serveFiles {
 		http.HandleFunc("/favicon.ico", faviconHandler)
-		http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./html/js"))))
-		http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("./html/css"))))
-		http.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir("./html/img"))))
+		http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./web/js"))))
+		http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("./web/css"))))
+		http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./web/assets"))))
 	}
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		transport.ServeWebSocketRequest(lobbyInstance, w, r)
