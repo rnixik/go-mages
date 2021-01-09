@@ -1,23 +1,26 @@
 package game
 
+import "github.com/rnixik/go-mages/internal/lobby"
+
 type Bot struct {
-	transportClient ClientPlayer
-	nickname        string
+	lobby.Client
+	nickname string
+	id       uint64
 }
 
-func NewBot(botId uint64) *Bot {
+func NewBot(botId uint64) lobby.ClientPlayer {
 	return &Bot{
-		transportClient: nil,
-		nickname:        "",
+		nickname: "Bot",
+		id:       botId,
 	}
 }
 
 func (b *Bot) SendEvent(event interface{}) {
-	b.transportClient.SendEvent(event)
+
 }
 
 func (b *Bot) Id() uint64 {
-	return b.transportClient.Id()
+	return b.id
 }
 
 func (b *Bot) Nickname() string {

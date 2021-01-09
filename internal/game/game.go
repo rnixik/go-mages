@@ -4,14 +4,9 @@ import (
 	"github.com/rnixik/go-mages/internal/lobby"
 )
 
-type ClientPlayer interface {
-	SendEvent(event interface{})
-	Id() uint64
-	Nickname() string
-}
-
 type Game struct {
-	playersClients []ClientPlayer
+	playersClients []lobby.ClientPlayer
+	status         string
 }
 
 func (g Game) DispatchGameEvent(client lobby.ClientPlayer, event interface{}) {
@@ -31,14 +26,14 @@ func (g Game) AddBotCommand(client lobby.ClientPlayer) {
 }
 
 func (g Game) StartMainLoop() {
-	panic("implement me")
+
 }
 
 func (g Game) Status() string {
-	panic("implement me")
+	return g.status
 }
 
-func NewGame(playersClients []ClientPlayer) *Game {
+func NewGame(playersClients []lobby.ClientPlayer) *Game {
 	return &Game{
 		playersClients: playersClients,
 	}

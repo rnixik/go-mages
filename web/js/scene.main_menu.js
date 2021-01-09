@@ -44,6 +44,7 @@ const MainMenu = function () {
             self.wsConnection = new WebSocket(WEBSOCKET_URL);
             self.wsConnection.onopen = function () {
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'join', data: nickname}));
+                self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch'}));
             };
             self.wsConnection.onclose = () => {
                 window.setTimeout(function () {

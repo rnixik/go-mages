@@ -11,6 +11,8 @@ const (
 	ClientCommandLobbySubTypeCreateRoom = "createRoom"
 	// ClientCommandLobbySubTypeJoinRoom join the room
 	ClientCommandLobbySubTypeJoinRoom = "joinRoom"
+	// ClientCommandLobbySubTypeMakeMatch find an opponent and play the game
+	ClientCommandLobbySubTypeMakeMatch = "makeMatch"
 
 	// ClientCommandTypeGame namespace for commands about a game
 	ClientCommandTypeGame = "game"
@@ -46,5 +48,5 @@ type ClientCommand struct {
 	Type    string          `json:"type"`
 	SubType string          `json:"subType"`
 	Data    json.RawMessage `json:"data"`
-	client  *Client
+	client  ClientPlayer
 }

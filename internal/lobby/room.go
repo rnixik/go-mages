@@ -8,7 +8,7 @@ import (
 
 // RoomMember represents connected to a room client.
 type RoomMember struct {
-	client     *Client
+	client     ClientPlayer
 	wantToPlay bool
 	isPlayer   bool
 	isBot      bool
@@ -23,24 +23,24 @@ type Room struct {
 	lobby   *Lobby
 }
 
-func newRoom(roomId uint64, owner *Client, lobby *Lobby) *Room {
+func newRoom(roomId uint64, owner ClientPlayer, lobby *Lobby) *Room {
 	members := make(map[*RoomMember]bool, 0)
 	ownerInRoom := newRoomMember(owner, false)
 	ownerInRoom.isPlayer = true
 	members[ownerInRoom] = true
 	room := &Room{roomId, ownerInRoom, members, nil, lobby}
-	owner.room = room
+	owner.SetRoom(room)
 
 	return room
 }
 
-func newRoomMember(client *Client, isBot bool) *RoomMember {
+func newRoomMember(client ClientPlayer, isBot bool) *RoomMember {
 	return &RoomMember{client, true, false, isBot}
 }
 
 // Name returns name of the room by its owner.
 func (r *Room) Name() string {
-	return r.owner.client.nickname
+	return r.owner.client.Nickname()
 }
 
 // Id returns id of the room
@@ -48,7 +48,7 @@ func (r *Room) Id() uint64 {
 	return r.id
 }
 
-func (r *Room) getRoomMember(client *Client) (*RoomMember, bool) {
+func (r *Room) getRoomMember(client ClientPlayer) (*RoomMember, bool) {
 	for c := range r.members {
 		if c.client.Id() == client.Id() {
 			return c, true
@@ -57,7 +57,7 @@ func (r *Room) getRoomMember(client *Client) (*RoomMember, bool) {
 	return nil, false
 }
 
-func (r *Room) removeClient(client *Client) (changedOwner bool, roomBecameEmpty bool) {
+func (r *Room) removeClient(client ClientPlayer) (changedOwner bool, roomBecameEmpty bool) {
 	member, ok := r.getRoomMember(client)
 	if !ok {
 		return
@@ -92,10 +92,10 @@ func (r *Room) removeClient(client *Client) (changedOwner bool, roomBecameEmpty 
 	return
 }
 
-func (r *Room) addClient(client *Client) {
+func (r *Room) addClient(client ClientPlayer) {
 	member := newRoomMember(client, false)
 	r.members[member] = true
-	client.room = r
+	client.SetRoom(r)
 
 	if len(r.getPlayers()) < 2 {
 		member.isPlayer = true
@@ -105,14 +105,14 @@ func (r *Room) addClient(client *Client) {
 	r.broadcastEvent(roomUpdatedEvent, member.client)
 
 	roomJoinedEvent := RoomJoinedEvent{r.toRoomInfo()}
-	client.transportClient.SendEvent(roomJoinedEvent)
+	client.SendEvent(roomJoinedEvent)
 
 	if r.game != nil {
 		r.game.OnClientJoined(client)
 	}
 }
 
-func (r *Room) addBot(botClient *Client) {
+func (r *Room) addBot(botClient ClientPlayer) {
 	member := newRoomMember(botClient, true)
 	r.members[member] = true
 	member.isPlayer = true
@@ -121,13 +121,13 @@ func (r *Room) addBot(botClient *Client) {
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
 	roomJoinedEvent := RoomJoinedEvent{r.toRoomInfo()}
-	botClient.transportClient.SendEvent(roomJoinedEvent)
+	botClient.SendEvent(roomJoinedEvent)
 }
 
-func (r *Room) broadcastEvent(event interface{}, exceptClient *Client) {
+func (r *Room) broadcastEvent(event interface{}, exceptClient ClientPlayer) {
 	for m := range r.members {
 		if exceptClient == nil || m.client.Id() != exceptClient.Id() {
-			m.client.transportClient.SendEvent(event)
+			m.client.SendEvent(event)
 		}
 	}
 }
@@ -162,7 +162,7 @@ func (r *Room) hasSlotForPlayer() bool {
 	return membersWhoWantToPlayNum+1 <= r.lobby.maxPlayersInRoom
 }
 
-func (r *Room) changeMemberWantStatus(client *Client, wantToPlay bool) {
+func (r *Room) changeMemberWantStatus(client ClientPlayer, wantToPlay bool) {
 	member, ok := r.getRoomMember(client)
 	if !ok {
 		return
@@ -173,40 +173,40 @@ func (r *Room) changeMemberWantStatus(client *Client, wantToPlay bool) {
 	r.broadcastEvent(changeStatusEvent, nil)
 }
 
-func (r *Room) onWantToPlayCommand(client *Client) {
+func (r *Room) onWantToPlayCommand(client ClientPlayer) {
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorCantChangeStatusGameHasBeenStarted}
-		client.transportClient.SendEvent(errEvent)
+		client.SendEvent(errEvent)
 		return
 	}
 	r.changeMemberWantStatus(client, true)
 }
 
-func (r *Room) onWantToSpectateCommand(client *Client) {
+func (r *Room) onWantToSpectateCommand(client ClientPlayer) {
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorCantChangeStatusGameHasBeenStarted}
-		client.transportClient.SendEvent(errEvent)
+		client.SendEvent(errEvent)
 		return
 	}
 	r.changeMemberWantStatus(client, false)
 	r.setPlayerStatus(client.Id(), false)
 }
 
-func (r *Room) onSetPlayerStatusCommand(c *Client, memberId uint64, playerStatus bool) {
+func (r *Room) onSetPlayerStatusCommand(c ClientPlayer, memberId uint64, playerStatus bool) {
 	if r.owner.client.Id() != c.Id() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorCantChangeStatusGameHasBeenStarted}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
 	if playerStatus && !r.hasSlotForPlayer() {
 		errEvent := &ClientCommandError{errorNumberOfPlayersExceededLimit}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
@@ -232,21 +232,21 @@ func (r *Room) setPlayerStatus(memberId uint64, playerStatus bool) {
 	r.broadcastEvent(roomMemberChangedPlayerStatusEvent, nil)
 }
 
-func (r *Room) onStartGameCommand(c *Client) {
+func (r *Room) onStartGameCommand(c ClientPlayer) {
 	pls := r.getPlayers()
 	if len(pls) < 2 {
 		errEvent := &ClientCommandError{errorNeedOneMorePlayer}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if len(pls) > r.lobby.maxPlayersInRoom {
 		errEvent := &ClientCommandError{errorNumberOfPlayersExceededLimit}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorGameHasBeenAlreadyStarted}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
@@ -266,15 +266,15 @@ func (r *Room) onStartGameCommand(c *Client) {
 	r.lobby.sendRoomUpdate(r)
 }
 
-func (r *Room) onDeleteGameCommand(c *Client) {
+func (r *Room) onDeleteGameCommand(c ClientPlayer) {
 	if r.owner.client.Id() != c.Id() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if r.game == nil {
 		errEvent := &ClientCommandError{errorGameAlreadyDeleted}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
@@ -286,39 +286,46 @@ func (r *Room) onDeleteGameCommand(c *Client) {
 	r.lobby.sendRoomUpdate(r)
 }
 
-func (r *Room) onAddBotCommand(c *Client) {
+func (r *Room) onAddBotCommand(c ClientPlayer) {
 	if r.owner.client.Id() != c.Id() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorGameHasBeenAlreadyStarted}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if !r.hasSlotForPlayer() {
 		errEvent := &ClientCommandError{errorNumberOfPlayersExceededLimit}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
-	atomic.AddUint64(&lastClientId, 1)
-	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
-	bot := r.lobby.newBotFunc(lastBotIdSafe)
-	botClient := bot.(*Client)
+	botClient := r.createBot()
 	r.addBot(botClient)
 }
 
-func (r *Room) onRemoveBotsCommand(c *Client) {
+func (r *Room) createBot() ClientPlayer {
+	atomic.AddUint64(&lastClientId, 1)
+	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
+	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe)
+	client := clientPlayer.(ClientPlayer)
+	r.addBot(client)
+
+	return client
+}
+
+func (r *Room) onRemoveBotsCommand(c ClientPlayer) {
 	if r.owner.client.Id() != c.Id() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 	if r.game != nil {
 		errEvent := &ClientCommandError{errorGameHasBeenAlreadyStarted}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 

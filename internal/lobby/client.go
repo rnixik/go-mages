@@ -11,7 +11,11 @@ type ClientSender interface {
 type ClientPlayer interface {
 	SendEvent(event interface{})
 	Id() uint64
+	SetNickname(string)
 	Nickname() string
+	SetRoom(room *Room)
+	Room() *Room
+	CloseConnection()
 }
 
 type Client struct {
@@ -31,6 +35,22 @@ func (c *Client) Id() uint64 {
 	return c.transportClient.Id()
 }
 
+func (c *Client) SetNickname(nickname string) {
+	c.nickname = nickname
+}
+
 func (c *Client) Nickname() string {
 	return c.nickname
+}
+
+func (c *Client) SetRoom(room *Room) {
+	c.room = room
+}
+
+func (c *Client) Room() *Room {
+	return c.room
+}
+
+func (c *Client) CloseConnection() {
+	c.transportClient.Close()
 }

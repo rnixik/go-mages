@@ -22,10 +22,15 @@ type GameEventsDispatcher interface {
 type NewGameFunc func(playersClients []ClientPlayer) GameEventsDispatcher
 type NewBotFunc func(botId uint64) ClientPlayer
 
+type MatchMaker interface {
+	MakeMatch(client ClientPlayer, foundFunc func(clients []ClientPlayer), notFoundFunc func(), addBotFunc func() ClientPlayer)
+	Cancel(client ClientPlayer)
+}
+
 // Lobby is the first place for connected clients. It passes commands to games.
 type Lobby struct {
 	// Registered clients.
-	clients map[uint64]*Client
+	clients map[uint64]ClientPlayer
 
 	// Outbound events to the clients.
 	broadcast chan interface{}
@@ -43,24 +48,26 @@ type Lobby struct {
 	games []GameEventsDispatcher
 
 	// Rooms created by clients
-	rooms map[*Client]*Room
+	rooms map[ClientPlayer]*Room
 
 	newGameFunc      NewGameFunc
 	newBotFunc       NewBotFunc
+	matchMaker       MatchMaker
 	maxPlayersInRoom int
 }
 
-func NewLobby(newGameFunc NewGameFunc, newBotFunc NewBotFunc, maxPlayersInRoom int) *Lobby {
+func NewLobby(newGameFunc NewGameFunc, newBotFunc NewBotFunc, matchMaker MatchMaker, maxPlayersInRoom int) *Lobby {
 	return &Lobby{
 		broadcast:        make(chan interface{}),
 		register:         make(chan ClientSender),
 		unregister:       make(chan ClientSender),
-		clients:          make(map[uint64]*Client),
+		clients:          make(map[uint64]ClientPlayer),
 		clientCommands:   make(chan *ClientCommand),
 		games:            make([]GameEventsDispatcher, 0),
-		rooms:            make(map[*Client]*Room),
+		rooms:            make(map[ClientPlayer]*Room),
 		newGameFunc:      newGameFunc,
 		newBotFunc:       newBotFunc,
+		matchMaker:       matchMaker,
 		maxPlayersInRoom: maxPlayersInRoom,
 	}
 }
@@ -76,7 +83,7 @@ func (l *Lobby) Run() {
 					continue
 				}
 				for _, client := range l.clients {
-					client.transportClient.SendEvent(event)
+					client.SendEvent(event)
 				}
 			}
 		}
@@ -98,7 +105,7 @@ func (l *Lobby) Run() {
 			if client, ok := l.clients[tc.Id()]; ok {
 				delete(l.clients, client.Id())
 				l.onClientLeft(client)
-				client.transportClient.Close()
+				client.CloseConnection()
 			}
 		case clientCommand := <-l.clientCommands:
 			l.onClientCommand(clientCommand)
@@ -125,8 +132,8 @@ func (l *Lobby) broadcastEvent(event interface{}) {
 	l.broadcast <- event
 }
 
-func (l *Lobby) onJoinCommand(c *Client, nickname string) {
-	c.nickname = nickname
+func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
+	c.SetNickname(nickname)
 
 	broadcastEvent := &ClientBroadCastJoinedEvent{
 		Id:       c.Id(),
@@ -155,11 +162,11 @@ func (l *Lobby) onJoinCommand(c *Client, nickname string) {
 		Clients:      clientsInList,
 		Rooms:        roomsInList,
 	}
-	c.transportClient.SendEvent(event)
+	c.SendEvent(event)
 }
 
-func (l *Lobby) onClientLeft(client *Client) {
-	room := client.room
+func (l *Lobby) onClientLeft(client ClientPlayer) {
+	room := client.Room()
 	if room != nil {
 		l.onLeftRoom(client, room)
 	}
@@ -169,15 +176,15 @@ func (l *Lobby) onClientLeft(client *Client) {
 	l.broadcastEvent(leftEvent)
 }
 
-func (l *Lobby) onCreateNewRoomCommand(c *Client) {
+func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 	_, roomExists := l.rooms[c]
 	if roomExists {
 		errEvent := &ClientCommandError{errorYouCanCreateOneRoomOnly}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 		return
 	}
 
-	oldRoomJoined := c.room
+	oldRoomJoined := c.Room()
 	if oldRoomJoined != nil {
 		l.onLeftRoom(c, oldRoomJoined)
 	}
@@ -192,7 +199,7 @@ func (l *Lobby) onCreateNewRoomCommand(c *Client) {
 	l.broadcastEvent(event)
 
 	roomJoinedEvent := RoomJoinedEvent{room.toRoomInfo()}
-	c.transportClient.SendEvent(roomJoinedEvent)
+	c.SendEvent(roomJoinedEvent)
 }
 
 func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
@@ -204,9 +211,9 @@ func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
 	return nil, fmt.Errorf("room not found by id = %d", roomId)
 }
 
-func (l *Lobby) onLeftRoom(c *Client, room *Room) {
+func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 	changedOwner, roomBecameEmpty := room.removeClient(c)
-	c.room = nil
+	c.SetRoom(nil)
 	if roomBecameEmpty {
 		roomInListRemovedEvent := &RoomInListRemovedEvent{room.Id()}
 		l.broadcastEvent(roomInListRemovedEvent)
@@ -222,8 +229,8 @@ func (l *Lobby) onLeftRoom(c *Client, room *Room) {
 	l.broadcastEvent(roomInListUpdatedEvent)
 }
 
-func (l *Lobby) onJoinRoomCommand(c *Client, roomId uint64) {
-	oldRoomJoined := c.room
+func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
+	oldRoomJoined := c.Room()
 	if oldRoomJoined != nil && oldRoomJoined.Id() == roomId {
 		return
 	}
@@ -237,8 +244,27 @@ func (l *Lobby) onJoinRoomCommand(c *Client, roomId uint64) {
 		l.broadcastEvent(roomInListUpdatedEvent)
 	} else {
 		errEvent := &ClientCommandError{errorRoomDoesNotExist}
-		c.transportClient.SendEvent(errEvent)
+		c.SendEvent(errEvent)
 	}
+}
+
+func (l *Lobby) makeMatch(c ClientPlayer) {
+	oldRoomJoined := c.Room()
+	if oldRoomJoined != nil {
+		l.onLeftRoom(c, oldRoomJoined)
+	}
+	l.createNewRoomCommand(c)
+	room := l.rooms[c]
+	l.matchMaker.MakeMatch(
+		c,
+		func(clients []ClientPlayer) {
+			room.onStartGameCommand(c)
+		},
+		func() {},
+		func() ClientPlayer {
+			return room.createBot()
+		},
+	)
 }
 
 func (l *Lobby) onClientCommand(cc *ClientCommand) {
@@ -248,35 +274,36 @@ func (l *Lobby) onClientCommand(cc *ClientCommand) {
 			if err := json.Unmarshal(cc.Data, &nickname); err != nil {
 				return
 			}
-			l.onJoinCommand(cc.client, nickname)
+			l.joinLobbyCommand(cc.client, nickname)
 		} else if cc.SubType == ClientCommandLobbySubTypeCreateRoom {
-			l.onCreateNewRoomCommand(cc.client)
+			l.createNewRoomCommand(cc.client)
 		} else if cc.SubType == ClientCommandLobbySubTypeJoinRoom {
 			var roomId uint64
 			if err := json.Unmarshal(cc.Data, &roomId); err != nil {
 				return
 			}
-			l.onJoinRoomCommand(cc.client, roomId)
+			l.joinRoomCommand(cc.client, roomId)
+		} else if cc.SubType == ClientCommandLobbySubTypeMakeMatch {
+			l.makeMatch(cc.client)
 		}
-	} else if cc.Type == ClientCommandTypeGame {
-
-		l.dispatchGameEvent(cc)
 	} else if cc.Type == ClientCommandTypeRoom {
-		if cc.client.room == nil {
+		if cc.client.Room() == nil {
 			return
 		}
-		cc.client.room.onClientCommand(cc)
+		cc.client.Room().onClientCommand(cc)
+	} else if cc.Type == ClientCommandTypeGame {
+		l.dispatchGameEvent(cc)
 	}
 }
 
 func (l *Lobby) dispatchGameEvent(cc *ClientCommand) {
-	if cc.client.room == nil {
+	if cc.client.Room() == nil {
 		return
 	}
-	if cc.client.room.game == nil {
+	if cc.client.Room().game == nil {
 		return
 	}
-	cc.client.room.game.DispatchGameEvent(cc.client, cc.Data)
+	cc.client.Room().game.DispatchGameEvent(cc.client, cc.Data)
 }
 
 func (l *Lobby) sendRoomUpdate(room *Room) {

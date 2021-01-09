@@ -48,19 +48,16 @@ func main() {
 	indexPageContent = bytes.Replace(indexPageContent, []byte("%APP_VERSION%"), bytes.TrimSpace([]byte(version)), 2)
 
 	newGameFunc := func(playersClients []lobby.ClientPlayer) lobby.GameEventsDispatcher {
-		gamePlayersClients := make([]game.ClientPlayer, len(playersClients))
-		for _, pc := range playersClients {
-			gamePlayersClients = append(gamePlayersClients, pc)
-		}
-
-		return game.NewGame(gamePlayersClients)
+		return game.NewGame(playersClients)
 	}
 
 	newBotFunc := func(botId uint64) lobby.ClientPlayer {
 		return game.NewBot(botId)
 	}
 
-	lobbyInstance := lobby.NewLobby(newGameFunc, newBotFunc, 2)
+	matchMaker := game.NewMatchMaker()
+
+	lobbyInstance := lobby.NewLobby(newGameFunc, newBotFunc, matchMaker, 2)
 	go lobbyInstance.Run()
 	http.HandleFunc("/", serveIndexPage)
 	if *serveFiles {
