@@ -9,13 +9,15 @@ type BotClient struct {
 	id              uint64
 	incomingEvents  chan interface{}
 	outgoingActions chan interface{}
+	sendGameEvent   func(client lobby.ClientPlayer, event interface{})
 }
 
-func NewBotClient(botId uint64) lobby.ClientPlayer {
+func NewBotClient(botId uint64, sendGameEvent func(client lobby.ClientPlayer, event interface{})) lobby.ClientPlayer {
 	botClient := &BotClient{
 		id:              botId,
 		incomingEvents:  make(chan interface{}),
 		outgoingActions: make(chan interface{}),
+		sendGameEvent:   sendGameEvent,
 	}
 	botClient.SetNickname("BotClient")
 
@@ -38,7 +40,7 @@ func (bc *BotClient) sendingActionsToGame() {
 	for {
 		select {
 		case playerAction := <-bc.outgoingActions:
-			bc.Room().Game().DispatchGameEvent(bc, playerAction)
+			bc.sendGameEvent(bc, playerAction)
 		}
 	}
 }

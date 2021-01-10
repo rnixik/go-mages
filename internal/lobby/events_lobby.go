@@ -20,7 +20,7 @@ type ClientJoinedEvent struct {
 	YourId       uint64          `json:"yourId"`
 	YourNickname string          `json:"yourNickname"`
 	Clients      []*ClientInList `json:"clients"`
-	Rooms        []*RoomInList   `json:"rooms"`
+	Rooms        []*RoomInList   `json:"roomsCreatedByClients"`
 }
 
 // ClientLeftEvent contains id of client who left lobby.

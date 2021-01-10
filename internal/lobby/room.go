@@ -29,7 +29,7 @@ func newRoom(roomId uint64, owner ClientPlayer, lobby *Lobby) *Room {
 	ownerInRoom.isPlayer = true
 	members[ownerInRoom] = true
 	room := &Room{roomId, ownerInRoom, members, nil, lobby}
-	owner.SetRoom(room)
+	lobby.clientsJoinedRooms[owner] = room
 
 	return room
 }
@@ -100,7 +100,6 @@ func (r *Room) removeClient(client ClientPlayer) (changedOwner bool, roomBecameE
 func (r *Room) addClient(client ClientPlayer) {
 	member := newRoomMember(client, false)
 	r.members[member] = true
-	client.SetRoom(r)
 
 	if len(r.getPlayers()) < 2 {
 		member.isPlayer = true
@@ -315,7 +314,12 @@ func (r *Room) onAddBotCommand(c ClientPlayer) {
 func (r *Room) createBot() ClientPlayer {
 	atomic.AddUint64(&lastClientId, 1)
 	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
-	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe)
+	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, func(client ClientPlayer, event interface{}) {
+		if r.game == nil {
+			return
+		}
+		r.game.DispatchGameEvent(client, event)
+	})
 	client := clientPlayer.(ClientPlayer)
 	r.addBot(client)
 

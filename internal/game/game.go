@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"github.com/rnixik/go-mages/internal/lobby"
 )
 
@@ -10,7 +11,7 @@ type Game struct {
 }
 
 func (g Game) DispatchGameEvent(client lobby.ClientPlayer, event interface{}) {
-	panic("implement me")
+	fmt.Printf("got event to game from client '%s': %+v\n", client.Nickname(), event)
 }
 
 func (g Game) OnClientRemoved(client lobby.ClientPlayer) {

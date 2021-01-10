@@ -13,8 +13,6 @@ type ClientPlayer interface {
 	Id() uint64
 	SetNickname(string)
 	Nickname() string
-	SetRoom(room *Room)
-	Room() *Room
 	CloseConnection()
 }
 
@@ -41,14 +39,6 @@ func (c *Client) SetNickname(nickname string) {
 
 func (c *Client) Nickname() string {
 	return c.nickname
-}
-
-func (c *Client) SetRoom(room *Room) {
-	c.room = room
-}
-
-func (c *Client) Room() *Room {
-	return c.room
 }
 
 func (c *Client) CloseConnection() {

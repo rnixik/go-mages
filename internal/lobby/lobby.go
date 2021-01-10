@@ -19,7 +19,7 @@ type GameEventsDispatcher interface {
 }
 
 type NewGameFunc func(playersClients []ClientPlayer) GameEventsDispatcher
-type NewBotFunc func(botId uint64) ClientPlayer
+type NewBotFunc func(botId uint64, sendGameEvent func(client ClientPlayer, event interface{})) ClientPlayer
 
 type MatchMaker interface {
 	MakeMatch(client ClientPlayer, foundFunc func(clients []ClientPlayer), notFoundFunc func(), addBotFunc func() ClientPlayer)
@@ -47,7 +47,10 @@ type Lobby struct {
 	games []GameEventsDispatcher
 
 	// Rooms created by clients
-	rooms map[ClientPlayer]*Room
+	roomsCreatedByClients map[ClientPlayer]*Room
+
+	// Room where client is
+	clientsJoinedRooms map[ClientPlayer]*Room
 
 	newGameFunc      NewGameFunc
 	newBotFunc       NewBotFunc
@@ -57,17 +60,18 @@ type Lobby struct {
 
 func NewLobby(newGameFunc NewGameFunc, newBotFunc NewBotFunc, matchMaker MatchMaker, maxPlayersInRoom int) *Lobby {
 	return &Lobby{
-		broadcast:        make(chan interface{}),
-		register:         make(chan ClientSender),
-		unregister:       make(chan ClientSender),
-		clients:          make(map[uint64]ClientPlayer),
-		clientCommands:   make(chan *ClientCommand),
-		games:            make([]GameEventsDispatcher, 0),
-		rooms:            make(map[ClientPlayer]*Room),
-		newGameFunc:      newGameFunc,
-		newBotFunc:       newBotFunc,
-		matchMaker:       matchMaker,
-		maxPlayersInRoom: maxPlayersInRoom,
+		broadcast:             make(chan interface{}),
+		register:              make(chan ClientSender),
+		unregister:            make(chan ClientSender),
+		clients:               make(map[uint64]ClientPlayer),
+		clientCommands:        make(chan *ClientCommand),
+		games:                 make([]GameEventsDispatcher, 0),
+		roomsCreatedByClients: make(map[ClientPlayer]*Room),
+		clientsJoinedRooms:    make(map[ClientPlayer]*Room),
+		newGameFunc:           newGameFunc,
+		newBotFunc:            newBotFunc,
+		matchMaker:            matchMaker,
+		maxPlayersInRoom:      maxPlayersInRoom,
 	}
 }
 
@@ -150,7 +154,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 	}
 
 	roomsInList := make([]*RoomInList, 0)
-	for _, room := range l.rooms {
+	for _, room := range l.roomsCreatedByClients {
 		roomInList := room.toRoomInList()
 		roomsInList = append(roomsInList, roomInList)
 	}
@@ -165,7 +169,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 }
 
 func (l *Lobby) onClientLeft(client ClientPlayer) {
-	room := client.Room()
+	room := l.clientsJoinedRooms[client]
 	if room != nil {
 		l.onLeftRoom(client, room)
 	}
@@ -176,14 +180,14 @@ func (l *Lobby) onClientLeft(client ClientPlayer) {
 }
 
 func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
-	_, roomExists := l.rooms[c]
+	_, roomExists := l.roomsCreatedByClients[c]
 	if roomExists {
 		errEvent := &ClientCommandError{errorYouCanCreateOneRoomOnly}
 		c.SendEvent(errEvent)
 		return
 	}
 
-	oldRoomJoined := c.Room()
+	oldRoomJoined := l.clientsJoinedRooms[c]
 	if oldRoomJoined != nil {
 		l.onLeftRoom(c, oldRoomJoined)
 	}
@@ -192,7 +196,7 @@ func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 	lastRoomIdSafe := atomic.LoadUint64(&lastRoomId)
 
 	room := newRoom(lastRoomIdSafe, c, l)
-	l.rooms[c] = room
+	l.roomsCreatedByClients[c] = room
 
 	event := &ClientCreatedRoomEvent{room.toRoomInList()}
 	l.broadcastEvent(event)
@@ -202,7 +206,7 @@ func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 }
 
 func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
-	for _, r := range l.rooms {
+	for _, r := range l.roomsCreatedByClients {
 		if r.Id() == roomId {
 			return r, nil
 		}
@@ -212,24 +216,24 @@ func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
 
 func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 	changedOwner, roomBecameEmpty := room.removeClient(c)
-	c.SetRoom(nil)
+	delete(l.clientsJoinedRooms, c)
 	if roomBecameEmpty {
 		roomInListRemovedEvent := &RoomInListRemovedEvent{room.Id()}
 		l.broadcastEvent(roomInListRemovedEvent)
-		l.rooms[c] = nil
-		delete(l.rooms, c)
+		l.roomsCreatedByClients[c] = nil
+		delete(l.roomsCreatedByClients, c)
 		return
 	}
 	if changedOwner {
-		l.rooms[room.owner.client] = room
-		delete(l.rooms, c)
+		l.roomsCreatedByClients[room.owner.client] = room
+		delete(l.roomsCreatedByClients, c)
 	}
 	roomInListUpdatedEvent := &RoomInListUpdatedEvent{room.toRoomInList()}
 	l.broadcastEvent(roomInListUpdatedEvent)
 }
 
 func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
-	oldRoomJoined := c.Room()
+	oldRoomJoined := l.clientsJoinedRooms[c]
 	if oldRoomJoined != nil && oldRoomJoined.Id() == roomId {
 		return
 	}
@@ -238,6 +242,7 @@ func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 	}
 	room, err := l.getRoomById(roomId)
 	if err == nil {
+		l.clientsJoinedRooms[c] = room
 		room.addClient(c)
 		roomInListUpdatedEvent := &RoomInListUpdatedEvent{room.toRoomInList()}
 		l.broadcastEvent(roomInListUpdatedEvent)
@@ -248,12 +253,12 @@ func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 }
 
 func (l *Lobby) makeMatch(c ClientPlayer) {
-	oldRoomJoined := c.Room()
+	oldRoomJoined := l.clientsJoinedRooms[c]
 	if oldRoomJoined != nil {
 		l.onLeftRoom(c, oldRoomJoined)
 	}
 	l.createNewRoomCommand(c)
-	room := l.rooms[c]
+	room := l.roomsCreatedByClients[c]
 	l.matchMaker.MakeMatch(
 		c,
 		func(clients []ClientPlayer) {
@@ -286,23 +291,23 @@ func (l *Lobby) onClientCommand(cc *ClientCommand) {
 			l.makeMatch(cc.client)
 		}
 	} else if cc.Type == ClientCommandTypeRoom {
-		if cc.client.Room() == nil {
+		if l.clientsJoinedRooms[cc.client] == nil {
 			return
 		}
-		cc.client.Room().onClientCommand(cc)
+		l.clientsJoinedRooms[cc.client].onClientCommand(cc)
 	} else if cc.Type == ClientCommandTypeGame {
 		l.dispatchGameEvent(cc)
 	}
 }
 
 func (l *Lobby) dispatchGameEvent(cc *ClientCommand) {
-	if cc.client.Room() == nil {
+	if l.clientsJoinedRooms[cc.client] == nil {
 		return
 	}
-	if cc.client.Room().game == nil {
+	if l.clientsJoinedRooms[cc.client].game == nil {
 		return
 	}
-	cc.client.Room().game.DispatchGameEvent(cc.client, cc.Data)
+	l.clientsJoinedRooms[cc.client].game.DispatchGameEvent(cc.client, cc.Data)
 }
 
 func (l *Lobby) sendRoomUpdate(room *Room) {

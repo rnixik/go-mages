@@ -51,8 +51,8 @@ func main() {
 		return game.NewGame(playersClients)
 	}
 
-	newBotFunc := func(botId uint64) lobby.ClientPlayer {
-		return game.NewBotClient(botId)
+	newBotFunc := func(botId uint64, sendGameEvent func(client lobby.ClientPlayer, event interface{})) lobby.ClientPlayer {
+		return game.NewBotClient(botId, sendGameEvent)
 	}
 
 	matchMaker := game.NewMatchMaker()
