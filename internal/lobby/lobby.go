@@ -201,7 +201,7 @@ func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 	event := &ClientCreatedRoomEvent{room.toRoomInList()}
 	l.broadcastEvent(event)
 
-	roomJoinedEvent := RoomJoinedEvent{room.toRoomInfo()}
+	roomJoinedEvent := &RoomJoinedEvent{room.toRoomInfo()}
 	c.SendEvent(roomJoinedEvent)
 }
 

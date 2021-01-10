@@ -108,7 +108,7 @@ func (r *Room) addClient(client ClientPlayer) {
 	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
 	r.broadcastEvent(roomUpdatedEvent, member.client)
 
-	roomJoinedEvent := RoomJoinedEvent{r.toRoomInfo()}
+	roomJoinedEvent := &RoomJoinedEvent{r.toRoomInfo()}
 	client.SendEvent(roomJoinedEvent)
 
 	if r.game != nil {
@@ -124,7 +124,7 @@ func (r *Room) addBot(botClient ClientPlayer) {
 	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
-	roomJoinedEvent := RoomJoinedEvent{r.toRoomInfo()}
+	roomJoinedEvent := &RoomJoinedEvent{r.toRoomInfo()}
 	botClient.SendEvent(roomJoinedEvent)
 }
 
