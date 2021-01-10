@@ -14,7 +14,6 @@ type GameEventsDispatcher interface {
 	DispatchGameEvent(client ClientPlayer, event interface{})
 	OnClientRemoved(client ClientPlayer)
 	OnClientJoined(client ClientPlayer)
-	AddBotCommand(client ClientPlayer)
 	StartMainLoop()
 	Status() string
 }

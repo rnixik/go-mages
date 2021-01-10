@@ -48,6 +48,11 @@ func (r *Room) Id() uint64 {
 	return r.id
 }
 
+// Game returns current game instance in the room
+func (r *Room) Game() GameEventsDispatcher {
+	return r.game
+}
+
 func (r *Room) getRoomMember(client ClientPlayer) (*RoomMember, bool) {
 	for c := range r.members {
 		if c.client.Id() == client.Id() {

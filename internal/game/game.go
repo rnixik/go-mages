@@ -21,10 +21,6 @@ func (g Game) OnClientJoined(client lobby.ClientPlayer) {
 	panic("implement me")
 }
 
-func (g Game) AddBotCommand(client lobby.ClientPlayer) {
-	panic("implement me")
-}
-
 func (g Game) StartMainLoop() {
 
 }

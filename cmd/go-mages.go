@@ -52,7 +52,7 @@ func main() {
 	}
 
 	newBotFunc := func(botId uint64) lobby.ClientPlayer {
-		return game.NewBot(botId)
+		return game.NewBotClient(botId)
 	}
 
 	matchMaker := game.NewMatchMaker()

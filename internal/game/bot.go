@@ -1,28 +1,26 @@
 package game
 
-import "github.com/rnixik/go-mages/internal/lobby"
+import "fmt"
 
 type Bot struct {
-	lobby.Client
-	nickname string
-	id       uint64
+	botClient *BotClient
 }
 
-func NewBot(botId uint64) lobby.ClientPlayer {
+func newBot(botClient *BotClient) *Bot {
 	return &Bot{
-		nickname: "Bot",
-		id:       botId,
+		botClient: botClient,
 	}
 }
 
-func (b *Bot) SendEvent(event interface{}) {
-
+func (b *Bot) run() {
+	for {
+		select {
+		case event := <-b.botClient.incomingEvents:
+			b.dispatchEvent(event)
+		}
+	}
 }
 
-func (b *Bot) Id() uint64 {
-	return b.id
-}
-
-func (b *Bot) Nickname() string {
-	return b.nickname
+func (b *Bot) dispatchEvent(event interface{}) {
+	fmt.Printf("BOT: got event to make decision: %+x", event)
 }
