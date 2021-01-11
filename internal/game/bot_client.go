@@ -32,6 +32,10 @@ func (bc *BotClient) SendEvent(event interface{}) {
 	bc.incomingEvents <- event
 }
 
+func (bc *BotClient) sendEventToGame(event interface{}) {
+	bc.outgoingActions <- event
+}
+
 func (bc *BotClient) Id() uint64 {
 	return bc.id
 }

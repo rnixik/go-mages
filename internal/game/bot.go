@@ -24,5 +24,5 @@ func (b *Bot) run() {
 func (b *Bot) dispatchEvent(event interface{}) {
 	fmt.Printf("BOT: got event to make decision: %+v\n", event)
 	demoEvent := &DemoEvent{"Demo message value"}
-	b.botClient.outgoingActions <- demoEvent
+	b.botClient.sendEventToGame(demoEvent)
 }
