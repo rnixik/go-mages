@@ -11,15 +11,15 @@ var lastClientId uint64
 var lastRoomId uint64
 
 type GameEventsDispatcher interface {
-	DispatchGameEvent(client ClientPlayer, event interface{})
+	DispatchGameCommand(client ClientPlayer, eventName string, eventData interface{})
 	OnClientRemoved(client ClientPlayer)
 	OnClientJoined(client ClientPlayer)
 	StartMainLoop()
 	Status() string
 }
 
-type NewGameFunc func(playersClients []ClientPlayer) GameEventsDispatcher
-type NewBotFunc func(botId uint64, sendGameEvent func(client ClientPlayer, event interface{})) ClientPlayer
+type NewGameFunc func(playersClients []ClientPlayer, broadcastEventFunc func(event interface{})) GameEventsDispatcher
+type NewBotFunc func(botId uint64, sendGameEvent func(client ClientPlayer, eventName string, eventData json.RawMessage)) ClientPlayer
 
 type MatchMaker interface {
 	MakeMatch(client ClientPlayer, foundFunc func(clients []ClientPlayer), notFoundFunc func(), addBotFunc func() ClientPlayer)
@@ -296,18 +296,18 @@ func (l *Lobby) onClientCommand(cc *ClientCommand) {
 		}
 		l.clientsJoinedRooms[cc.client].onClientCommand(cc)
 	} else if cc.Type == ClientCommandTypeGame {
-		l.dispatchGameEvent(cc)
+		l.dispatchGameCommand(cc)
 	}
 }
 
-func (l *Lobby) dispatchGameEvent(cc *ClientCommand) {
+func (l *Lobby) dispatchGameCommand(cc *ClientCommand) {
 	if l.clientsJoinedRooms[cc.client] == nil {
 		return
 	}
 	if l.clientsJoinedRooms[cc.client].game == nil {
 		return
 	}
-	l.clientsJoinedRooms[cc.client].game.DispatchGameEvent(cc.client, cc.Data)
+	l.clientsJoinedRooms[cc.client].game.DispatchGameCommand(cc.client, cc.SubType, cc.Data)
 }
 
 func (l *Lobby) sendRoomUpdate(room *Room) {

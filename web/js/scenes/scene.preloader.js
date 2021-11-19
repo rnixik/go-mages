@@ -33,6 +33,19 @@ var sceneConfigPreloader = {
 
     },
     create: function() {
+        this.anims.create({
+            key: 'lightning',
+            frames: 'lightning',
+            frameRate: 12,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'fireball',
+            frames: 'fireball',
+            frameRate: 12,
+            repeat: -1
+        });
+
         this.scene.switch('MainMenu');
     }
 };

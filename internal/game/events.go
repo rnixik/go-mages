@@ -1,5 +1,6 @@
 package game
 
-type DemoEvent struct {
-	DemoMessage string `json:"demoMessage"`
+type CastEvent struct {
+	SpellId        string `json:"spellId"`
+	OriginPlayerId uint64 `json:originPlayerId`
 }

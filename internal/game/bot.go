@@ -1,6 +1,9 @@
 package game
 
-import "fmt"
+import (
+	"log"
+	"math/rand"
+)
 
 type Bot struct {
 	botClient *BotClient
@@ -22,7 +25,23 @@ func (b *Bot) run() {
 }
 
 func (b *Bot) dispatchEvent(event interface{}) {
-	fmt.Printf("BOT: got event to make decision: %+v\n", event)
-	demoEvent := &DemoEvent{"Demo message value"}
-	b.botClient.sendEventToGame(demoEvent)
+	log.Printf("BOT: got event to make decision: %+v\n", event)
+	castEvent, ok := event.(CastEvent)
+	if !ok {
+		return
+	}
+	if castEvent.OriginPlayerId == b.botClient.Id() {
+		return
+	}
+	log.Printf("BOT: got spell %s", castEvent.SpellId)
+
+	random := rand.Intn(2)
+	var command *CastCommand
+	if random == 0 {
+		command = &CastCommand{"fireball"}
+	} else {
+		command = &CastCommand{"lightning"}
+	}
+
+	b.botClient.sendCommandToGame("Cast", command)
 }

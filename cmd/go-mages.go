@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"github.com/rnixik/go-mages/internal/game"
 	"github.com/rnixik/go-mages/internal/lobby"
 	"github.com/rnixik/go-mages/internal/transport"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
 var addr = flag.String("addr", "127.0.0.1:8009", "http service address")
@@ -34,6 +37,7 @@ func faviconHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	flag.Parse()
 
 	indexPageContentRaw, err := ioutil.ReadFile("web/index.html")
@@ -47,12 +51,12 @@ func main() {
 	indexPageContent = bytes.Replace(indexPageContentRaw, []byte("%APP_ENV%"), []byte(*appEnv), 1)
 	indexPageContent = bytes.Replace(indexPageContent, []byte("%APP_VERSION%"), bytes.TrimSpace([]byte(version)), 2)
 
-	newGameFunc := func(playersClients []lobby.ClientPlayer) lobby.GameEventsDispatcher {
-		return game.NewGame(playersClients)
+	newGameFunc := func(playersClients []lobby.ClientPlayer, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
+		return game.NewGame(playersClients, broadcastEventFunc)
 	}
 
-	newBotFunc := func(botId uint64, sendGameEvent func(client lobby.ClientPlayer, event interface{})) lobby.ClientPlayer {
-		return game.NewBotClient(botId, sendGameEvent)
+	newBotFunc := func(botId uint64, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {
+		return game.NewBotClient(botId, sendGameCommand)
 	}
 
 	matchMaker := game.NewMatchMaker()

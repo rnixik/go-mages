@@ -8,6 +8,7 @@ const MainMenu = function () {
 
     const self = this;
     this.game = null;
+    this.onIncomingGameEventCallback = function () {};
 
     this.create = function(game) {
         this.game = game;
@@ -73,12 +74,24 @@ const MainMenu = function () {
     this.onIncomingMessage = function (json, evt) {
         console.log('INCOMING', json);
         if (json.name === 'ClientJoinedEvent') {
-            self.startGame()
+            self.startGame(json.data.yourId);
+            return;
         }
+
+        self.onIncomingGameEventCallback(json.name, json.data);
     };
 
-    this.startGame = function() {
-        this.game.scene.switch('Game');
+    this.startGame = function(myClientId) {
+        console.log('Starting game with my client id = ' + myClientId);
+        this.game.scene.start('Game', {
+            myClientId: myClientId,
+            sendGameCommand: function (type, data) {
+                self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
+            },
+            setOnIncomingGameEventCallback: function (callback) {
+                self.onIncomingGameEventCallback = callback;
+            },
+        });
     };
 }
 

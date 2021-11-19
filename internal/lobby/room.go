@@ -261,7 +261,9 @@ func (r *Room) onStartGameCommand(c ClientPlayer) {
 		}
 	}
 
-	r.game = r.lobby.newGameFunc(playersClients)
+	r.game = r.lobby.newGameFunc(playersClients, func(event interface{}) {
+		r.broadcastEvent(event, nil)
+	})
 	go r.game.StartMainLoop()
 
 	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
@@ -314,11 +316,11 @@ func (r *Room) onAddBotCommand(c ClientPlayer) {
 func (r *Room) createBot() ClientPlayer {
 	atomic.AddUint64(&lastClientId, 1)
 	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
-	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, func(client ClientPlayer, event interface{}) {
+	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, func(client ClientPlayer, eventName string, eventData json.RawMessage) {
 		if r.game == nil {
 			return
 		}
-		r.game.DispatchGameEvent(client, event)
+		r.game.DispatchGameCommand(client, eventName, eventData)
 	})
 	client := clientPlayer.(ClientPlayer)
 	r.addBot(client)

@@ -3,16 +3,26 @@ const GameScene = function() {
     this.joinedData = {};
 
     this.myPlayerIndex = 0;
+    this.myClientId = 0;
     this.player1 = null;
     this.player2 = null ;
 
     this.spellButtons = [];
     this.castedSpells = [];
     this.game = null;
+    this.sendGameCommand = function () {};
 };
 
 GameScene.prototype = {
-    create: function(game) {
+    create: function(game, data) {
+        const self = this;
+
+        this.myClientId = data.myClientId;
+        this.sendGameCommand = data.sendGameCommand;
+        data.setOnIncomingGameEventCallback(function (name, data) {
+            self.onIncomingGameEvent(name, data);
+        });
+
         this.game = game;
         this.game.add.sprite(0, 0, 'bg').setOrigin(0, 0);
 
@@ -100,32 +110,33 @@ GameScene.prototype = {
     },
     onIconClick: function(icon) {
         if (icon.spellId) {
-            // this.socket.emit('action', {'action': 'cast', 'spell': icon.spellId});
+            this.sendGameCommand('Cast', {'spellId': icon.spellId})
         }
-        this.player1.stateCasting(400);
     },
     onCast: function(data) {
-        var spell = false;
-        if (data.spell === 'lightning') {
-            spell = new LightningSpell(this);
-        } else if (data.spell === 'fireball') {
-            spell = new FireballSpell(this);
-        }
-
-        var targetPlayer = this.player1;
-        var sourcePlayer = this.player2;
-        if (data.sourcePlayer === this.myPlayerIndex) {
-            sourcePlayer = this.player1;
+        let targetPlayer = this.player1;
+        let originPlayer = this.player2;
+        if (this.myClientId === data.OriginPlayerId) {
+            originPlayer = this.player1;
             targetPlayer = this.player2;
         }
 
-        if (spell) {
-            spell.cast(sourcePlayer, targetPlayer);
-            sourcePlayer.stateCasting(spell.playerAnimateDuration);
-            this.castedSpells.push(spell);
-            //console.log(data.spell, data.sourcePlayer, this.myPlayerIndex);
+        let castingDuration = 400;
+        let spell;
+        switch (data.spellId) {
+            case 'fireball':
+                spell = new FireballSpell();
+                break;
+            case 'lightning':
+                spell = new LightningSpell();
+                castingDuration = 500;
+                break;
+            default:
+                throw Error("Unknown spell: " + data.spellId);
         }
 
+        spell.cast(this.game, originPlayer, targetPlayer);
+        originPlayer.stateCasting(castingDuration);
     },
     onPlayersUpdate: function(data) {
         var pl1 = this.player1;
@@ -153,6 +164,13 @@ GameScene.prototype = {
             });
         }, 1000);
 
+    },
+    onIncomingGameEvent: function (name, data) {
+        switch (name) {
+            case 'CastEvent':
+                this.onCast(data);
+                break;
+        }
     }
 };
 
@@ -212,7 +230,6 @@ Player.prototype.stateCasting = function(duration) {
 
 Player.prototype._changeAnimation = function(frame, duration) {
     this.sprite.setFrame(frame);
-    console.log(this.sprite.anims.currentFrame);
     clearTimeout(this.changeAnimationTimeoutId);
     var _this = this;
     this.changeAnimationTimeoutId = setTimeout(function(){
@@ -239,8 +256,8 @@ const gameScene = new GameScene();
 
 var sceneConfigGame = {
     key: 'Game',
-    create: function () {
-        gameScene.create(this);
+    create: function (data) {
+        gameScene.create(this, data);
     },
     update: function () {
         gameScene.update(this);
