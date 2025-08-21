@@ -177,6 +177,13 @@ GameScene.prototype = {
         }, prepareDuration);
 
     },
+    onDamage: function(data) {
+        let targetPlayer = this.player2;
+        if (this.myClientId === data.targetPlayerId) {
+            targetPlayer = this.player1;
+        }
+        targetPlayer.setHealthBar(data.targetPlayerHp / 100);
+    },
     onPlayersUpdate: function(data) {
         var pl1 = this.player1;
         var pl2 = this.player2;
@@ -208,6 +215,9 @@ GameScene.prototype = {
         switch (name) {
             case 'CastEvent':
                 this.onCast(data);
+                break;
+            case 'DamageEvent':
+                this.onDamage(data);
                 break;
         }
     }
