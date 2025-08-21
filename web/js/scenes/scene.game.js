@@ -1,3 +1,5 @@
+const prepareDuration = 300;
+
 const GameScene = function() {
     this.socket = null;
     this.joinedData = {};
@@ -31,7 +33,7 @@ GameScene.prototype = {
         var platformTextureImage = this.game.textures.get('platform').getSourceImage();
         var platformWidth = platformTextureImage.width;
         var platformHeight = platformTextureImage.height;
-        var platformWBottomPadding = 30;
+        var platformWBottomPadding = 39;
         var platformSidePadding = 80;
 
         var platform1 = platforms.create(
@@ -63,11 +65,19 @@ GameScene.prototype = {
 
         this.player1.draw();
         this.player2.draw();
-
+        this.player1.stateDefault();
+        this.player2.stateDefault();
 
         this.spellButtons = this.game.add.group();
-        this.addSpellIcon('fireball', 15, 60, 'icon_fireball', 'icon_frame_red');
-        this.addSpellIcon('lightning', 15, 140, 'icon_lightning', 'icon_frame_blue');
+        this.addSpellIcon('fireball', 15, 60, 'icon_fireball');
+        this.addSpellIcon('rocks', 94, 60, 'icon_earth');
+        this.addSpellIcon('lightning', 15, 140, 'icon_lightning');
+        this.addSpellIcon('comet', 94, 140, 'icon_ice');
+
+        this.addSpellProtectionIcon('protect_fireball', game.cameras.main.width - 140, 50, 'icon_fireball');
+        this.addSpellProtectionIcon('protect_rocks', game.cameras.main.width - 75, 50, 'icon_earth');
+        this.addSpellProtectionIcon('protect_lightning', game.cameras.main.width - 140, 125, 'icon_lightning');
+        this.addSpellProtectionIcon('protect_comet', game.cameras.main.width - 75, 125, 'icon_ice');
         //
         // this.onConnected();
     },
@@ -97,16 +107,25 @@ GameScene.prototype = {
         //     alert('Connection lost');
         // });
     },
-    addSpellIcon: function(spellId, x, y, spellIconResourceId, spellFrameResourceId) {
+    addSpellIcon: function(spellId, x, y, spellIconResourceId) {
         var spellIcon = this.game.add.sprite(x, y, spellIconResourceId).setOrigin(0, 0).setDisplaySize(64, 64);
-        this.game.add.sprite(x, y, spellFrameResourceId).setOrigin(0, 0).setDisplaySize(64, 64);
+        this.game.add.sprite(x, y, 'icon_frame').setOrigin(0, 0).setDisplaySize(64, 64);
         spellIcon.spellId = spellId;
         spellIcon.setInteractive();
         var self = this;
         spellIcon.on('pointerdown', function () {
             self.onIconClick(spellIcon);
         });
-
+    },
+    addSpellProtectionIcon: function(spellId, x, y, spellIconResourceId) {
+        this.game.add.sprite(x + 20, y + 20, spellIconResourceId).setOrigin(0, 0).setDisplaySize(20, 20);
+        let shieldIcon = this.game.add.sprite(x, y, 'icon_frame_shield').setOrigin(0, 0).setDisplaySize(64, 64);
+        shieldIcon.spellId = spellId;
+        shieldIcon.setInteractive();
+        let self = this;
+        shieldIcon.on('pointerdown', function () {
+            self.onIconClick(shieldIcon);
+        });
     },
     onIconClick: function(icon) {
         if (icon.spellId) {
@@ -131,12 +150,32 @@ GameScene.prototype = {
                 spell = new LightningSpell();
                 castingDuration = 500;
                 break;
+            case 'comet':
+                spell = new CometSpell();
+                break;
+            case 'rocks':
+                spell = new RocksSpell();
+                break;
+            case 'protect_fireball':
+            case 'protect_lightning':
+            case 'protect_rocks':
+            case 'protect_comet':
+                spell = new ShieldSpell();
+                spell.cast(this.game, originPlayer, data.spellId);
+                originPlayer.stateShield(300);
+                return;
             default:
                 throw Error("Unknown spell: " + data.spellId);
         }
 
-        spell.cast(this.game, originPlayer, targetPlayer);
-        originPlayer.stateCasting(castingDuration);
+        originPlayer.stateDefault();
+        originPlayer.statePreparation(data.spellId);
+        let _this = this;
+        setTimeout(function() {
+            spell.cast(_this.game, originPlayer, targetPlayer);
+            originPlayer.stateCasting(castingDuration);
+        }, prepareDuration);
+
     },
     onPlayersUpdate: function(data) {
         var pl1 = this.player1;
@@ -221,10 +260,42 @@ Player.prototype.drawHealthBar = function() {
 };
 
 Player.prototype.stateCasting = function(duration) {
-    this.stateDefault();
     var _this = this;
     setTimeout(function(){
         _this._changeAnimation(1, duration);
+    }, 10);
+};
+
+Player.prototype.statePreparation = function(spellId) {
+    this.sprite.setFrame(2);
+    let sprite = this.game.add.sprite(this.posX - 130, this.posY - 180, 'sparks', 1).setOrigin(0, 0);
+    sprite.play('sparks');
+
+    // set color
+    switch (spellId) {
+        case 'fireball':
+            sprite.tint = 0xff6f00;
+            break;
+        case 'lightning':
+            sprite.tint = 0xffd800;
+            break;
+        case 'comet':
+            sprite.tint = 0x86bfe0;
+            break;
+        case 'rocks':
+            sprite.tint = 0x684740;
+            break;
+    }
+
+    setTimeout(function () {
+        sprite.destroy(true, true);
+    }, prepareDuration);
+};
+
+Player.prototype.stateShield = function(duration) {
+    var _this = this;
+    setTimeout(function(){
+        _this._changeAnimation(3, duration);
     }, 10);
 };
 

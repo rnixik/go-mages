@@ -35,7 +35,7 @@ func (g Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string,
 }
 
 func (g Game) OnClientRemoved(client lobby.ClientPlayer) {
-	panic("implement me")
+	fmt.Printf("client '%s' removed from game\n", client.Nickname())
 }
 
 func (g Game) OnClientJoined(client lobby.ClientPlayer) {

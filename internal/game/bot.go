@@ -35,12 +35,17 @@ func (b *Bot) dispatchEvent(event interface{}) {
 	}
 	log.Printf("BOT: got spell %s", castEvent.SpellId)
 
-	random := rand.Intn(2)
+	random := rand.Intn(4)
 	var command *CastCommand
-	if random == 0 {
+	switch random {
+	case 0:
 		command = &CastCommand{"fireball"}
-	} else {
+	case 1:
 		command = &CastCommand{"lightning"}
+	case 2:
+		command = &CastCommand{"rocks"}
+	case 3:
+		command = &CastCommand{"comet"}
 	}
 
 	b.botClient.sendCommandToGame("Cast", command)

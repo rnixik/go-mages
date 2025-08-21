@@ -18,18 +18,24 @@ var sceneConfigPreloader = {
         this.load.image('defeat', 'assets/defeat.png');
         this.load.image('victory', 'assets/victory.png');
 
-        this.load.image('bg', 'assets/forest.png');
-        this.load.image('platform', 'assets/platform.png');
+        this.load.image('bg', 'assets/temples.png');
+        this.load.image('platform', 'assets/platform140.png');
         this.load.spritesheet('mage', 'assets/mage.png', { frameWidth: 130, frameHeight: 110 });
+        this.load.spritesheet('sparks', 'assets/sparks256.png', { frameWidth: 256, frameHeight: 256 });
         this.load.image('hb_bar', 'assets/blood_red_bar.png');
         this.load.image('hb_health1', 'assets/blood_red_bar_health.png');
         this.load.image('hb_health2', 'assets/blood_red_bar_health.png');
-        this.load.image('icon_fireball', 'assets/icons/fireball-red-1.png');
-        this.load.image('icon_lightning', 'assets/icons/lightning-blue-1.png');
-        this.load.image('icon_frame_red', 'assets/icons/frame-9-red.png');
-        this.load.image('icon_frame_blue', 'assets/icons/frame-7-blue.png');
+        this.load.image('ice', 'assets/comet.png');
+        this.load.image('icon_fireball', 'assets/icons/fire256.png');
+        this.load.image('icon_lightning', 'assets/icons/lightning256.png');
+        this.load.image('icon_earth', 'assets/icons/earth256.png');
+        this.load.image('icon_ice', 'assets/icons/ice256.png');
+        this.load.image('icon_frame', 'assets/icons/frame256.png');
+        this.load.image('icon_frame_shield', 'assets/icons/shield256.png');
         this.load.spritesheet('lightning', 'assets/lightning.png', { frameWidth: 196, frameHeight: 534 });
         this.load.spritesheet('fireball', 'assets/fireball.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('rocks', 'assets/rocks_animation_120.png', { frameWidth: 120, frameHeight: 172 });
+        this.load.spritesheet('shield_animation', 'assets/shield_animation.png', { frameWidth: 256, frameHeight: 256 });
 
     },
     create: function() {
@@ -42,6 +48,24 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'fireball',
             frames: 'fireball',
+            frameRate: 12,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'sparks',
+            frames: 'sparks',
+            frameRate: 12,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'rocks',
+            frames: 'rocks',
+            frameRate: 12,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'shield_animation',
+            frames: 'shield_animation',
             frameRate: 12,
             repeat: -1
         });
