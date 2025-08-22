@@ -1,5 +1,3 @@
-const prepareDuration = 300;
-
 const GameScene = function() {
     this.socket = null;
     this.joinedData = {};
@@ -141,10 +139,12 @@ GameScene.prototype = {
         }
 
         let castingDuration = 400;
+        let prepareDuration = 300;
         let spell;
         switch (data.spellId) {
             case 'fireball':
                 spell = new FireballSpell();
+                prepareDuration = 200;
                 break;
             case 'lightning':
                 spell = new LightningSpell();
@@ -152,6 +152,7 @@ GameScene.prototype = {
                 break;
             case 'comet':
                 spell = new CometSpell();
+                prepareDuration = 200;
                 break;
             case 'rocks':
                 spell = new RocksSpell();
@@ -169,7 +170,7 @@ GameScene.prototype = {
         }
 
         originPlayer.stateDefault();
-        originPlayer.statePreparation(data.spellId);
+        originPlayer.statePreparation(data.spellId, 400);
         let _this = this;
         setTimeout(function() {
             spell.cast(_this.game, originPlayer, targetPlayer);
@@ -178,6 +179,9 @@ GameScene.prototype = {
 
     },
     onDamage: function(data) {
+        if (data.shieldWorked) {
+            this.game.sound.play('shield_reflected');
+        }
         let targetPlayer = this.player2;
         if (this.myClientId === data.targetPlayerId) {
             targetPlayer = this.player1;
@@ -195,19 +199,21 @@ GameScene.prototype = {
         pl2.setHealthBar(data.hp2 / 100);
     },
     onEndGame: function(data) {
-        this.add.sprite(0, 0, 'black').alpha = 0.9;
-        if (data.winner === this.myPlayerIndex) {
-            var image = this.add.sprite(0, 100, 'victory');
+        this.game.add.sprite(0, 0, 'black').setOrigin(0, 0).alpha = 0.9;
+        let image;
+        if (this.myClientId === data.winnerPlayerId) {
+            image = this.game.add.sprite(0, 100, 'victory').setOrigin(0, 0);
         } else {
-            var image = this.add.sprite(0, 100, 'defeat');
+            image = this.game.add.sprite(0, 100, 'defeat').setOrigin(0, 0);
         }
 
         var _this = this;
         setTimeout(function() {
-            image.inputEnabled = true;
-            image.events.onInputDown.add(function() {
-                _this.game.state.start('MainMenu');
+            image.setInteractive();
+            image.on('pointerdown', function () {
+                _this.game.scene.switch('MainMenu');
             });
+
         }, 1000);
 
     },
@@ -218,6 +224,9 @@ GameScene.prototype = {
                 break;
             case 'DamageEvent':
                 this.onDamage(data);
+                break;
+            case 'EndGameEvent':
+                this.onEndGame(data);
                 break;
         }
     }
@@ -251,8 +260,7 @@ Player.prototype.draw = function() {
 };
 
 Player.prototype.getSpellPos = function() {
-    var spellPosition = {x: this.posX, y: this.posY - 25};
-    return spellPosition;
+    return {x: this.posX, y: this.posY - 25};
 };
 
 Player.prototype.drawHealthBar = function() {
@@ -276,7 +284,7 @@ Player.prototype.stateCasting = function(duration) {
     }, 10);
 };
 
-Player.prototype.statePreparation = function(spellId) {
+Player.prototype.statePreparation = function(spellId, prepareDuration) {
     this.sprite.setFrame(2);
     let sprite = this.game.add.sprite(this.posX - 130, this.posY - 180, 'sparks', 1).setOrigin(0, 0);
     sprite.play('sparks');

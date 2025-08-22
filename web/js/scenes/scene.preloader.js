@@ -36,6 +36,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('fireball', 'assets/fireball.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('rocks', 'assets/rocks_animation_120.png', { frameWidth: 120, frameHeight: 172 });
         this.load.spritesheet('shield_animation', 'assets/shield_animation.png', { frameWidth: 256, frameHeight: 256 });
+        this.load.audio('shield_reflected', 'assets/shield_reflected.mp3');
 
     },
     create: function() {

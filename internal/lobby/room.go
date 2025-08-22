@@ -316,7 +316,7 @@ func (r *Room) onAddBotCommand(c ClientPlayer) {
 func (r *Room) createBot() ClientPlayer {
 	atomic.AddUint64(&lastClientId, 1)
 	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
-	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, func(client ClientPlayer, eventName string, eventData json.RawMessage) {
+	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, r, func(client ClientPlayer, eventName string, eventData json.RawMessage) {
 		if r.game == nil {
 			return
 		}

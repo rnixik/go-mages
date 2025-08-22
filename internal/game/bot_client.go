@@ -27,7 +27,7 @@ type BotClientCommandDecodeWrapper struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func NewBotClient(botId uint64, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {
+func NewBotClient(botId uint64, room *lobby.Room, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {
 	botClient := &BotClient{
 		id:               botId,
 		incomingEvents:   make(chan interface{}),
@@ -36,7 +36,7 @@ func NewBotClient(botId uint64, sendGameCommand func(client lobby.ClientPlayer, 
 	}
 	botClient.SetNickname("BotClient")
 
-	bot := newBot(botClient)
+	bot := newBot(botClient, room)
 	go botClient.sendingCommandsToGame()
 	go bot.run()
 

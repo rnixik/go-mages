@@ -19,7 +19,7 @@ type GameEventsDispatcher interface {
 }
 
 type NewGameFunc func(playersClients []ClientPlayer, broadcastEventFunc func(event interface{})) GameEventsDispatcher
-type NewBotFunc func(botId uint64, sendGameEvent func(client ClientPlayer, eventName string, eventData json.RawMessage)) ClientPlayer
+type NewBotFunc func(botId uint64, room *Room, sendGameEvent func(client ClientPlayer, eventName string, eventData json.RawMessage)) ClientPlayer
 
 type MatchMaker interface {
 	MakeMatch(client ClientPlayer, foundFunc func(clients []ClientPlayer), notFoundFunc func(), addBotFunc func() ClientPlayer)

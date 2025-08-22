@@ -10,4 +10,9 @@ type DamageEvent struct {
 	Damage         int    `json:"damage"`
 	TargetPlayerId uint64 `json:"targetPlayerId"`
 	TargetPlayerHp int    `json:"targetPlayerHp"`
+	ShieldWorked   bool   `json:"shieldWorked"`
+}
+
+type EndGameEvent struct {
+	WinnerPlayerId uint64 `json:"winnerPlayerId"`
 }
