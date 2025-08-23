@@ -2,8 +2,10 @@ const GameScene = function() {
     this.socket = null;
     this.joinedData = {};
 
-    this.myPlayerIndex = 0;
+    this.myPlayerIndex = 1;
     this.myClientId = 0;
+    this.myNickname = 'Unknown';
+    this.opponentNickname = 'Unknown';
     this.player1 = null;
     this.player2 = null ;
 
@@ -18,6 +20,9 @@ GameScene.prototype = {
         const self = this;
 
         this.myClientId = data.myClientId;
+        this.myNickname = data.myNickname;
+        this.opponentNickname = data.opponentNickname;
+        console.log("Game started. My client id: " + this.myClientId + ", my nickname: " + this.myNickname + ", opponent nickname: " + this.opponentNickname);
         this.sendGameCommand = data.sendGameCommand;
         data.setOnIncomingGameEventCallback(function (name, data) {
             self.onIncomingGameEvent(name, data);
@@ -54,12 +59,16 @@ GameScene.prototype = {
             this.game,
             platformSidePadding + platformWidth / 2,
             game.cameras.main.height - platformHeight - platformWBottomPadding,
-            1);
+            1,
+            this.myNickname
+        );
         this.player2 = new Player(
             this.game,
             game.cameras.main.width - platformSidePadding - platformWidth / 2,
             game.cameras.main.height - platformHeight - platformWBottomPadding,
-            2);
+            2,
+            this.opponentNickname
+        );
 
         this.player1.draw();
         this.player2.draw();
@@ -233,7 +242,7 @@ GameScene.prototype = {
 };
 
 
-function Player(game, posX, posY, playerIndex) {
+function Player(game, posX, posY, playerIndex, nickname) {
     this.game = game;
     this.posX = posX;
     this.posY = posY;
@@ -246,6 +255,8 @@ function Player(game, posX, posY, playerIndex) {
 
     this.resourceId = 'mage';
     this.changeAnimationTimeoutId = null;
+
+    this.nickname = nickname;
 }
 
 Player.prototype.draw = function() {
@@ -257,6 +268,7 @@ Player.prototype.draw = function() {
 
     this.drawHealthBar();
     this.setHealthBar(1);
+    this.drawNickname();
 };
 
 Player.prototype.getSpellPos = function() {
@@ -275,6 +287,21 @@ Player.prototype.drawHealthBar = function() {
     healthBar.create(this.hbBasePosX, 10, 'hb_bar').setOrigin(0, 0);
     this.hbSpriteBaseWidth = this.hbSprite.width;
 
+};
+
+Player.prototype.drawNickname = function() {
+    this.game.make.text({
+        x: this.posX,
+        y: this.posY + 60,
+        text: this.nickname,
+        style: {
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            align: 'center',
+        },
+        origin: {x: 0.5, y: 0.5},
+        add: true
+    });
 };
 
 Player.prototype.stateCasting = function(duration) {

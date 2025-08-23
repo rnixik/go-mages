@@ -34,7 +34,8 @@ func (c *Client) Id() uint64 {
 }
 
 func (c *Client) SetNickname(nickname string) {
-	c.nickname = nickname
+	// limit up to 24 chars
+	c.nickname = nickname[:min(len(nickname), 24)]
 }
 
 func (c *Client) Nickname() string {

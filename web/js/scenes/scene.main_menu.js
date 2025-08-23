@@ -11,6 +11,7 @@ const MainMenu = function () {
     this.onIncomingGameEventCallback = function () {};
 
     this.myClientId = null;
+    this.nickname = 'default';
 
     this.create = function(game) {
         this.game = game;
@@ -28,6 +29,27 @@ const MainMenu = function () {
 
         this.loadingSpinner = game.add.sprite(400, 300, 'spinner');
         this.loadingSpinner.setVisible(false);
+
+        const savedNickname = localStorage.getItem("nickname");
+        if (savedNickname) {
+            this.nickname = savedNickname;
+        } else {
+            const defaultNickname = 'Player' + Math.floor(Math.random() * 1000);
+            const inputNickname = prompt("Please enter your nickname", defaultNickname);
+            if (inputNickname !== null && inputNickname.trim() !== '') {
+                this.nickname = inputNickname.trim();
+            } else {
+                this.nickname = defaultNickname;
+            }
+            try {
+                localStorage.setItem("nickname", this.nickname);
+            } catch (e) {
+                console.warn("Local storage not available, cannot save nickname");
+            }
+        }
+        // limit nickname up to 10 chars
+        this.nickname = this.nickname.substring(0, 10);
+        console.log("Using nickname: " + this.nickname);
     };
 
     this.update = function(game) {
@@ -70,7 +92,7 @@ const MainMenu = function () {
             };
         };
 
-        wsConnect('kekus');
+        wsConnect(this.nickname);
     };
 
     this.onIncomingMessage = function (json, evt) {
@@ -80,17 +102,33 @@ const MainMenu = function () {
             return;
         }
         if (json.name === 'GameStartedEvent') {
-            self.startGame(this.myClientId);
+            self.startGame(this.myClientId, json.data.room.members);
             return;
         }
 
         self.onIncomingGameEventCallback(json.name, json.data);
     };
 
-    this.startGame = function(myClientId) {
+    this.startGame = function(myClientId, players) {
         console.log('Starting game with my client id = ' + myClientId);
+
+        let myNickname = 'Unknown';
+        let opponentNickname = 'Unknown';
+        for (let i = 0; i < players.length; i++) {
+            if (!players[i].isPlayer) {
+                continue;
+            }
+            if (players[i].id === myClientId) {
+                myNickname = players[i].nickname;
+            } else {
+                opponentNickname = players[i].nickname;
+            }
+        }
+
         this.game.scene.start('Game', {
             myClientId: myClientId,
+            myNickname: myNickname,
+            opponentNickname: opponentNickname,
             sendGameCommand: function (type, data) {
                 self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
             },
