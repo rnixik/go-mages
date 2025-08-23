@@ -28,7 +28,7 @@ const (
 	// ClientCommandTypeRoom namespace for commands in room
 	ClientCommandTypeRoom = "room"
 	// ClientCommandRoomSubTypeWantToPlay command to show intention to play the game in room
-	ClientCommandRoomSubTypeWantToPlay = "wantToPlay"
+	ClientCommandRoomSubTypeWantToPlay = "wantsToPlay"
 	// ClientCommandRoomSubTypeWantToSpectate command to show intention to spectate game only in room
 	ClientCommandRoomSubTypeWantToSpectate = "wantToSpectate"
 	// ClientCommandRoomSubTypeSetPlayerStatus command to set the status of a player in a room by room owner

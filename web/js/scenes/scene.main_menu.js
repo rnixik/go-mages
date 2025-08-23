@@ -10,6 +10,8 @@ const MainMenu = function () {
     this.game = null;
     this.onIncomingGameEventCallback = function () {};
 
+    this.myClientId = null;
+
     this.create = function(game) {
         this.game = game;
         this.menuBackground = game.add.sprite(0, 0, 'menu_bg').setOrigin(0, 0);
@@ -74,7 +76,11 @@ const MainMenu = function () {
     this.onIncomingMessage = function (json, evt) {
         console.log('INCOMING', json);
         if (json.name === 'ClientJoinedEvent') {
-            self.startGame(json.data.yourId);
+            this.myClientId = json.data.yourId;
+            return;
+        }
+        if (json.name === 'GameStartedEvent') {
+            self.startGame(this.myClientId);
             return;
         }
 

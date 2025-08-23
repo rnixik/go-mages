@@ -253,19 +253,41 @@ func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 }
 
 func (l *Lobby) makeMatch(c ClientPlayer) {
-	oldRoomJoined := l.clientsJoinedRooms[c]
-	if oldRoomJoined != nil {
-		l.onLeftRoom(c, oldRoomJoined)
-	}
-	l.createNewRoomCommand(c)
-	room := l.roomsCreatedByClients[c]
 	l.matchMaker.MakeMatch(
 		c,
 		func(clients []ClientPlayer) {
-			room.onStartGameCommand(c)
+			// put all players to the same room of the first player
+			firstClient := clients[0]
+			roomOfFirstPlayer := l.clientsJoinedRooms[firstClient]
+			if roomOfFirstPlayer == nil {
+				l.createNewRoomCommand(firstClient)
+				roomOfFirstPlayer = l.roomsCreatedByClients[firstClient]
+			}
+
+			for i, client := range clients {
+				if i == 0 {
+					continue
+				}
+				if l.clientsJoinedRooms[client] != roomOfFirstPlayer {
+					oldRoomJoined := l.clientsJoinedRooms[client]
+					if oldRoomJoined != nil {
+						l.onLeftRoom(client, oldRoomJoined)
+					}
+					l.clientsJoinedRooms[client] = roomOfFirstPlayer
+					roomOfFirstPlayer.addClient(client)
+				}
+			}
+
+			roomOfFirstPlayer.onStartGameCommand(firstClient)
 		},
 		func() {},
 		func() ClientPlayer {
+			room := l.clientsJoinedRooms[c]
+			if room == nil {
+				l.createNewRoomCommand(c)
+				room = l.roomsCreatedByClients[c]
+			}
+
 			return room.createBot()
 		},
 	)

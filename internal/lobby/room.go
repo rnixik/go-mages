@@ -8,13 +8,13 @@ import (
 
 // RoomMember represents connected to a room client.
 type RoomMember struct {
-	client     ClientPlayer
-	wantToPlay bool
-	isPlayer   bool
-	isBot      bool
+	client      ClientPlayer
+	wantsToPlay bool
+	isPlayer    bool
+	isBot       bool
 }
 
-// Room represents place where some of members want to start a new game.
+// Room represents place where some of the members want to start a new game.
 type Room struct {
 	id      uint64
 	owner   *RoomMember
@@ -149,7 +149,7 @@ func (r *Room) getPlayers() []*RoomMember {
 func (r *Room) getMembersWhoWantToPlay() []*RoomMember {
 	membersWhoWantToPlay := make([]*RoomMember, 0)
 	for rm := range r.members {
-		if rm.wantToPlay {
+		if rm.wantsToPlay {
 			membersWhoWantToPlay = append(membersWhoWantToPlay, rm)
 		}
 	}
@@ -159,19 +159,19 @@ func (r *Room) getMembersWhoWantToPlay() []*RoomMember {
 func (r *Room) hasSlotForPlayer() bool {
 	membersWhoWantToPlayNum := 0
 	for rm := range r.members {
-		if rm.wantToPlay {
+		if rm.wantsToPlay {
 			membersWhoWantToPlayNum++
 		}
 	}
 	return membersWhoWantToPlayNum+1 <= r.lobby.maxPlayersInRoom
 }
 
-func (r *Room) changeMemberWantStatus(client ClientPlayer, wantToPlay bool) {
+func (r *Room) changeMemberWantStatus(client ClientPlayer, wantsToPlay bool) {
 	member, ok := r.getRoomMember(client)
 	if !ok {
 		return
 	}
-	member.wantToPlay = wantToPlay
+	member.wantsToPlay = wantsToPlay
 	memberInfo := member.memberToRoomMemberInfo()
 	changeStatusEvent := &RoomMemberChangedStatusEvent{memberInfo}
 	r.broadcastEvent(changeStatusEvent, nil)
@@ -268,6 +268,9 @@ func (r *Room) onStartGameCommand(c ClientPlayer) {
 
 	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
 	r.broadcastEvent(roomUpdatedEvent, nil)
+
+	gameStartedEvent := &GameStartedEvent{r.toRoomInfo()}
+	r.broadcastEvent(gameStartedEvent, nil)
 
 	r.lobby.sendRoomUpdate(r)
 }
@@ -385,11 +388,11 @@ func (r *Room) onGameEnded() {
 
 func (rm *RoomMember) memberToRoomMemberInfo() *RoomMemberInfo {
 	return &RoomMemberInfo{
-		Id:         rm.client.Id(),
-		Nickname:   rm.client.Nickname(),
-		WantToPlay: rm.wantToPlay,
-		IsPlayer:   rm.isPlayer,
-		IsBot:      rm.isBot,
+		Id:          rm.client.Id(),
+		Nickname:    rm.client.Nickname(),
+		WantsToPlay: rm.wantsToPlay,
+		IsPlayer:    rm.isPlayer,
+		IsBot:       rm.isBot,
 	}
 }
 

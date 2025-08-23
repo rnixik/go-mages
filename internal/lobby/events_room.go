@@ -2,11 +2,11 @@ package lobby
 
 // RoomMemberInfo contains info about a client in the room
 type RoomMemberInfo struct {
-	Id         uint64 `json:"id"`
-	Nickname   string `json:"nickname"`
-	WantToPlay bool   `json:"wantToPlay"`
-	IsPlayer   bool   `json:"isPlayer"`
-	IsBot      bool   `json:"isBot"`
+	Id          uint64 `json:"id"`
+	Nickname    string `json:"nickname"`
+	WantsToPlay bool   `json:"wantsToPlay"`
+	IsPlayer    bool   `json:"isPlayer"`
+	IsBot       bool   `json:"isBot"`
 }
 
 // RoomInfo contains info about room where client is.
@@ -26,6 +26,11 @@ type RoomJoinedEvent struct {
 
 // RoomUpdatedEvent contains info about updated room where client is
 type RoomUpdatedEvent struct {
+	Room *RoomInfo `json:"room"`
+}
+
+// GameStartedEvent broadcasted to all room members when game is started
+type GameStartedEvent struct {
 	Room *RoomInfo `json:"room"`
 }
 

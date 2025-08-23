@@ -26,7 +26,7 @@ func (b *Bot) run() {
 	for {
 		select {
 		case <-ticker.C:
-			if b.room.Game() != nil && b.room.Game().Status() == GameStatusEnded {
+			if b.room.Game() != nil && b.room.Game().Status() == StatusEnded {
 				return
 			}
 

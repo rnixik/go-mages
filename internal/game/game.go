@@ -24,7 +24,8 @@ var shieldsMap = map[string]bool{
 	SpellShieldRocks:     true,
 }
 
-const GameStatusEnded = "ended"
+const StatusStarted = "started"
+const StatusEnded = "ended"
 
 type Player struct {
 	client             lobby.ClientPlayer
@@ -61,6 +62,7 @@ func NewGame(playersClients []lobby.ClientPlayer, broadcastEventFunc func(event 
 		players[i] = newPlayer(client)
 	}
 	return &Game{
+		status:             StatusStarted,
 		players:            players,
 		broadcastEventFunc: broadcastEventFunc,
 		mutex:              sync.Mutex{},
@@ -159,7 +161,7 @@ func (g *Game) updatePlayerSpell(clientID uint64, spellId string) {
 
 func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 	if p2.hp <= 0 {
-		g.status = GameStatusEnded
+		g.status = StatusEnded
 		g.broadcastEventFunc(EndGameEvent{WinnerPlayerId: p1.client.Id()})
 	}
 
@@ -233,5 +235,5 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 }
 
 func (g *Game) isGameEnded() bool {
-	return g.status == GameStatusEnded
+	return g.status == StatusEnded
 }
