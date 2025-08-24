@@ -55,7 +55,7 @@ func (r *Room) Game() GameEventsDispatcher {
 
 func (r *Room) getRoomMember(client ClientPlayer) (*RoomMember, bool) {
 	for c := range r.members {
-		if c.client.Id() == client.Id() {
+		if c.client.ID() == client.ID() {
 			return c, true
 		}
 	}
@@ -130,7 +130,7 @@ func (r *Room) addBot(botClient ClientPlayer) {
 
 func (r *Room) broadcastEvent(event interface{}, exceptClient ClientPlayer) {
 	for m := range r.members {
-		if exceptClient == nil || m.client.Id() != exceptClient.Id() {
+		if exceptClient == nil || m.client.ID() != exceptClient.ID() {
 			m.client.SendEvent(event)
 		}
 	}
@@ -193,11 +193,11 @@ func (r *Room) onWantToSpectateCommand(client ClientPlayer) {
 		return
 	}
 	r.changeMemberWantStatus(client, false)
-	r.setPlayerStatus(client.Id(), false)
+	r.setPlayerStatus(client.ID(), false)
 }
 
 func (r *Room) onSetPlayerStatusCommand(c ClientPlayer, memberId uint64, playerStatus bool) {
-	if r.owner.client.Id() != c.Id() {
+	if r.owner.client.ID() != c.ID() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
 		c.SendEvent(errEvent)
 		return
@@ -220,7 +220,7 @@ func (r *Room) onSetPlayerStatusCommand(c ClientPlayer, memberId uint64, playerS
 func (r *Room) setPlayerStatus(memberId uint64, playerStatus bool) {
 	var foundMember *RoomMember
 	for rm := range r.members {
-		if rm.client.Id() == memberId {
+		if rm.client.ID() == memberId {
 			rm.isPlayer = playerStatus
 			foundMember = rm
 			break
@@ -276,7 +276,7 @@ func (r *Room) onStartGameCommand(c ClientPlayer) {
 }
 
 func (r *Room) onDeleteGameCommand(c ClientPlayer) {
-	if r.owner.client.Id() != c.Id() {
+	if r.owner.client.ID() != c.ID() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
 		c.SendEvent(errEvent)
 		return
@@ -296,7 +296,7 @@ func (r *Room) onDeleteGameCommand(c ClientPlayer) {
 }
 
 func (r *Room) onAddBotCommand(c ClientPlayer) {
-	if r.owner.client.Id() != c.Id() {
+	if r.owner.client.ID() != c.ID() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
 		c.SendEvent(errEvent)
 		return
@@ -332,7 +332,7 @@ func (r *Room) createBot() ClientPlayer {
 }
 
 func (r *Room) onRemoveBotsCommand(c ClientPlayer) {
-	if r.owner.client.Id() != c.Id() {
+	if r.owner.client.ID() != c.ID() {
 		errEvent := &ClientCommandError{errorYouShouldBeOwner}
 		c.SendEvent(errEvent)
 		return
@@ -388,7 +388,7 @@ func (r *Room) onGameEnded() {
 
 func (rm *RoomMember) memberToRoomMemberInfo() *RoomMemberInfo {
 	return &RoomMemberInfo{
-		Id:          rm.client.Id(),
+		Id:          rm.client.ID(),
 		Nickname:    rm.client.Nickname(),
 		WantsToPlay: rm.wantsToPlay,
 		IsPlayer:    rm.isPlayer,
@@ -403,7 +403,7 @@ func (r *Room) toRoomInList() *RoomInList {
 	}
 	roomInList := &RoomInList{
 		Id:         r.Id(),
-		OwnerId:    r.owner.client.Id(),
+		OwnerId:    r.owner.client.ID(),
 		Name:       r.Name(),
 		GameStatus: gameStatus,
 		MembersNum: len(r.members),
@@ -425,7 +425,7 @@ func (r *Room) toRoomInfo() *RoomInfo {
 
 	roomInfo := &RoomInfo{
 		Id:         r.Id(),
-		OwnerId:    r.owner.client.Id(),
+		OwnerId:    r.owner.client.ID(),
 		Name:       r.Name(),
 		GameStatus: gameStatus,
 		Members:    membersInfo,

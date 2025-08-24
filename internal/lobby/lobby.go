@@ -97,16 +97,16 @@ func (l *Lobby) Run() {
 		case tc := <-l.register:
 			atomic.AddUint64(&lastClientId, 1)
 			lastClientIdSafe := atomic.LoadUint64(&lastClientId)
-			tc.SetId(lastClientIdSafe)
+			tc.SetID(lastClientIdSafe)
 
 			client := &Client{
 				lobby:           l,
 				transportClient: tc,
 			}
-			l.clients[client.Id()] = client
+			l.clients[client.ID()] = client
 		case tc := <-l.unregister:
-			if client, ok := l.clients[tc.Id()]; ok {
-				delete(l.clients, client.Id())
+			if client, ok := l.clients[tc.ID()]; ok {
+				delete(l.clients, client.ID())
 				l.onClientLeft(client)
 				client.CloseConnection()
 			}
@@ -125,7 +125,7 @@ func (l *Lobby) UnregisterTransportClient(tc ClientSender) {
 }
 
 func (l *Lobby) HandleClientCommand(tc ClientSender, clientCommand *ClientCommand) {
-	if client, ok := l.clients[tc.Id()]; ok {
+	if client, ok := l.clients[tc.ID()]; ok {
 		clientCommand.client = client
 		l.clientCommands <- clientCommand
 	}
@@ -139,7 +139,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 	c.SetNickname(nickname)
 
 	broadcastEvent := &ClientBroadCastJoinedEvent{
-		Id:       c.Id(),
+		Id:       c.ID(),
 		Nickname: c.Nickname(),
 	}
 	l.broadcastEvent(broadcastEvent)
@@ -147,7 +147,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 	clientsInList := make([]*ClientInList, 0)
 	for _, client := range l.clients {
 		clientInList := &ClientInList{
-			Id:       client.Id(),
+			Id:       client.ID(),
 			Nickname: client.Nickname(),
 		}
 		clientsInList = append(clientsInList, clientInList)
@@ -160,7 +160,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 	}
 
 	event := &ClientJoinedEvent{
-		YourId:       c.Id(),
+		YourId:       c.ID(),
 		YourNickname: c.Nickname(),
 		Clients:      clientsInList,
 		Rooms:        roomsInList,
@@ -174,7 +174,7 @@ func (l *Lobby) onClientLeft(client ClientPlayer) {
 		l.onLeftRoom(client, room)
 	}
 	leftEvent := &ClientLeftEvent{
-		Id: client.Id(),
+		Id: client.ID(),
 	}
 	l.broadcastEvent(leftEvent)
 }

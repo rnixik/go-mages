@@ -56,7 +56,7 @@ func (b *Bot) dispatchEvent(event interface{}) {
 	if !ok {
 		return
 	}
-	if castEvent.OriginPlayerId == b.botClient.Id() {
+	if castEvent.OriginPlayerId == b.botClient.ID() {
 		return
 	}
 	log.Printf("BOT: got spell %s", castEvent.SpellId)

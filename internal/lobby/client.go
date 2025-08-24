@@ -3,14 +3,14 @@ package lobby
 // ClientSender represents interface which sends events to connected players.
 type ClientSender interface {
 	SendEvent(event interface{})
-	Id() uint64
-	SetId(id uint64)
+	ID() uint64
+	SetID(id uint64)
 	Close()
 }
 
 type ClientPlayer interface {
 	SendEvent(event interface{})
-	Id() uint64
+	ID() uint64
 	SetNickname(string)
 	Nickname() string
 	CloseConnection()
@@ -29,8 +29,8 @@ func (c *Client) SendEvent(event interface{}) {
 	c.transportClient.SendEvent(event)
 }
 
-func (c *Client) Id() uint64 {
-	return c.transportClient.Id()
+func (c *Client) ID() uint64 {
+	return c.transportClient.ID()
 }
 
 func (c *Client) SetNickname(nickname string) {

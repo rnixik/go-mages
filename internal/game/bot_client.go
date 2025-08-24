@@ -65,7 +65,7 @@ func (bc *BotClient) sendCommandToGame(commandType string, commandData interface
 	bc.outgoingCommands <- &GameBotCommandWithName{commandType, commandDataDecoded.Data}
 }
 
-func (bc *BotClient) Id() uint64 {
+func (bc *BotClient) ID() uint64 {
 	return bc.id
 }
 

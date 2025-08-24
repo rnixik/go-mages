@@ -101,13 +101,19 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 		if castCommand.SpellId == "" {
 			return
 		}
-		g.updatePlayerSpell(client.Id(), castCommand.SpellId)
+		g.updatePlayerSpell(client.ID(), castCommand.SpellId)
 		break
 	}
 }
 
 func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
-	fmt.Printf("client '%s' removed from game\n", client.Nickname())
+	winnerID := uint64(0)
+	for _, p := range g.players {
+		if p.client.ID() != client.ID() {
+			winnerID = p.client.ID()
+		}
+	}
+	g.endGame(winnerID)
 }
 
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
@@ -147,7 +153,7 @@ func (g *Game) updatePlayerSpell(clientID uint64, spellId string) {
 	defer g.mutex.Unlock()
 	for _, p := range g.players {
 		now := time.Now()
-		if p.client.Id() == clientID {
+		if p.client.ID() == clientID {
 			_, isShield := shieldsMap[spellId]
 			if isShield {
 				if p.lastSpellIdShield != "" && now.Sub(p.lastCastTimeShield).Milliseconds() < shieldCastDelay {
@@ -171,15 +177,19 @@ func (g *Game) updatePlayerSpell(clientID uint64, spellId string) {
 	}
 }
 
+func (g *Game) endGame(winnerPlayerId uint64) {
+	g.status = StatusEnded
+	g.broadcastEventFunc(EndGameEvent{WinnerPlayerId: winnerPlayerId})
+}
+
 func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 	if p2.hp <= 0 {
-		g.status = StatusEnded
-		g.broadcastEventFunc(EndGameEvent{WinnerPlayerId: p1.client.Id()})
+		g.endGame(p1.client.ID())
 	}
 
 	if p1.lastSpellIdShield != "" && !p1.spellWasSentShield {
 		p1.spellWasSentShield = true
-		g.broadcastEventFunc(CastEvent{SpellId: p1.lastSpellIdShield, OriginPlayerId: p1.client.Id()})
+		g.broadcastEventFunc(CastEvent{SpellId: p1.lastSpellIdShield, OriginPlayerId: p1.client.ID()})
 	}
 
 	if !p1.hasActiveSpell {
@@ -188,7 +198,7 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 
 	if !p1.spellWasSent {
 		p1.spellWasSent = true
-		g.broadcastEventFunc(CastEvent{SpellId: p1.lastSpellId, OriginPlayerId: p1.client.Id()})
+		g.broadcastEventFunc(CastEvent{SpellId: p1.lastSpellId, OriginPlayerId: p1.client.ID()})
 	}
 
 	var prepareDurationMs int64 = 500
@@ -240,7 +250,7 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 	g.broadcastEventFunc(DamageEvent{
 		SpellId:        p1.lastSpellId,
 		Damage:         damage,
-		TargetPlayerId: p2.client.Id(),
+		TargetPlayerId: p2.client.ID(),
 		TargetPlayerHp: p2.hp,
 		ShieldWorked:   isShieldMatch,
 	})

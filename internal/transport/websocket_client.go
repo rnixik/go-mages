@@ -121,11 +121,11 @@ func (c *WebSocketClient) SendMessage(message []byte) {
 
 }
 
-func (c *WebSocketClient) Id() uint64 {
+func (c *WebSocketClient) ID() uint64 {
 	return c.id
 }
 
-func (c *WebSocketClient) SetId(id uint64) {
+func (c *WebSocketClient) SetID(id uint64) {
 	c.id = id
 }
 

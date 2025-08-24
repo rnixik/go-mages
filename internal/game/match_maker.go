@@ -26,7 +26,7 @@ func (mm *MatchMaker) MakeMatch(client lobby.ClientPlayer, foundFunc func(client
 }
 
 func (mm *MatchMaker) Cancel(client lobby.ClientPlayer) {
-	if mm.waitingClient != nil && (*mm.waitingClient).Id() == client.Id() {
+	if mm.waitingClient != nil && (*mm.waitingClient).ID() == client.ID() {
 		mm.waitingClient = nil
 	}
 }
