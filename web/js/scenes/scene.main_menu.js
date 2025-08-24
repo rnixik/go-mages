@@ -101,6 +101,9 @@ const MainMenu = function () {
         this.menuControls.setVisible(false);
         this.loadingSpinner.setVisible(true);
         this.connectToServer();
+        if (!this.game.scene.systems.game.device.os.desktop) {
+            this.game.scene.scene.scale.startFullscreen();
+        }
     };
 
     this.connectToServer = function() {
