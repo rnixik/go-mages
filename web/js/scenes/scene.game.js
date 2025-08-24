@@ -19,8 +19,6 @@ GameScene.prototype = {
     create: function(game, data) {
         const self = this;
 
-        this.game.scale.startFullScreen();
-
         this.myClientId = data.myClientId;
         this.myNickname = data.myNickname;
         this.opponentNickname = data.opponentNickname;
