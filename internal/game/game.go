@@ -61,6 +61,9 @@ func NewGame(playersClients []lobby.ClientPlayer, broadcastEventFunc func(event 
 	for i, client := range playersClients {
 		players[i] = newPlayer(client)
 	}
+
+	fmt.Printf("new game created: %s vs %s\n", players[0].client.Nickname(), players[1].client.Nickname())
+
 	return &Game{
 		status:             StatusStarted,
 		players:            players,

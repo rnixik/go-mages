@@ -65,7 +65,7 @@ func (c *WebSocketClient) readLoop() {
 			}
 			break
 		}
-		log.Printf("Incoming message: %s", message)
+		// log.Printf("Incoming message: %s", message)
 
 		var clientCommand lobby.ClientCommand
 		if err := json.Unmarshal(message, &clientCommand); err != nil {
