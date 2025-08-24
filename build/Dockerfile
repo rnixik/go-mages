@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o mages ./cmd/go-mages.go
 FROM busybox
 WORKDIR /app
 COPY --from=builder /app/mages /app/
-COPY web /app/
-COPY version /app
+COPY web /app/web
+COPY version /app/version
 EXPOSE 8009
-ENTRYPOINT ["/app/mages", "--addr=:8009"]
+ENTRYPOINT ["./mages", "--addr=:8009"]
