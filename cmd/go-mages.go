@@ -51,8 +51,8 @@ func main() {
 	indexPageContent = bytes.Replace(indexPageContentRaw, []byte("%APP_ENV%"), []byte(*appEnv), 1)
 	indexPageContent = bytes.Replace(indexPageContent, []byte("%APP_VERSION%"), bytes.TrimSpace([]byte(version)), 2)
 
-	newGameFunc := func(playersClients []lobby.ClientPlayer, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
-		return game.NewGame(playersClients, broadcastEventFunc)
+	newGameFunc := func(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
+		return game.NewGame(playersClients, room, broadcastEventFunc)
 	}
 
 	newBotFunc := func(botId uint64, room *lobby.Room, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {

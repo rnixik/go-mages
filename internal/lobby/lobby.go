@@ -18,7 +18,7 @@ type GameEventsDispatcher interface {
 	Status() string
 }
 
-type NewGameFunc func(playersClients []ClientPlayer, broadcastEventFunc func(event interface{})) GameEventsDispatcher
+type NewGameFunc func(playersClients []ClientPlayer, room *Room, broadcastEventFunc func(event interface{})) GameEventsDispatcher
 type NewBotFunc func(botId uint64, room *Room, sendGameEvent func(client ClientPlayer, eventName string, eventData json.RawMessage)) ClientPlayer
 
 type MatchMaker interface {
@@ -169,6 +169,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 }
 
 func (l *Lobby) onClientLeft(client ClientPlayer) {
+	l.matchMaker.Cancel(client)
 	room := l.clientsJoinedRooms[client]
 	if room != nil {
 		l.onLeftRoom(client, room)
@@ -207,7 +208,7 @@ func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 
 func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
 	for _, r := range l.roomsCreatedByClients {
-		if r.Id() == roomId {
+		if r.ID() == roomId {
 			return r, nil
 		}
 	}
@@ -218,7 +219,7 @@ func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 	changedOwner, roomBecameEmpty := room.removeClient(c)
 	delete(l.clientsJoinedRooms, c)
 	if roomBecameEmpty {
-		roomInListRemovedEvent := &RoomInListRemovedEvent{room.Id()}
+		roomInListRemovedEvent := &RoomInListRemovedEvent{room.ID()}
 		l.broadcastEvent(roomInListRemovedEvent)
 		l.roomsCreatedByClients[c] = nil
 		delete(l.roomsCreatedByClients, c)
@@ -234,7 +235,7 @@ func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 
 func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 	oldRoomJoined := l.clientsJoinedRooms[c]
-	if oldRoomJoined != nil && oldRoomJoined.Id() == roomId {
+	if oldRoomJoined != nil && oldRoomJoined.ID() == roomId {
 		return
 	}
 	if oldRoomJoined != nil {
@@ -253,6 +254,14 @@ func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 }
 
 func (l *Lobby) makeMatch(c ClientPlayer) {
+	// create a room in case we want to play with bots
+	// create new room in case we are not owner (cannot start game with bots)
+	r := l.clientsJoinedRooms[c]
+	if r != nil {
+		l.onLeftRoom(c, r)
+	}
+	l.createNewRoomCommand(c)
+
 	l.matchMaker.MakeMatch(
 		c,
 		func(clients []ClientPlayer) {

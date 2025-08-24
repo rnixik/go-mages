@@ -2,7 +2,6 @@ package lobby
 
 import (
 	"encoding/json"
-	"log"
 	"sync/atomic"
 )
 
@@ -24,7 +23,7 @@ type Room struct {
 }
 
 func newRoom(roomId uint64, owner ClientPlayer, lobby *Lobby) *Room {
-	members := make(map[*RoomMember]bool, 0)
+	members := make(map[*RoomMember]bool)
 	ownerInRoom := newRoomMember(owner, false)
 	ownerInRoom.isPlayer = true
 	members[ownerInRoom] = true
@@ -43,8 +42,8 @@ func (r *Room) Name() string {
 	return r.owner.client.Nickname()
 }
 
-// Id returns id of the room
-func (r *Room) Id() uint64 {
+// ID returns id of the room
+func (r *Room) ID() uint64 {
 	return r.id
 }
 
@@ -73,8 +72,8 @@ func (r *Room) removeClient(client ClientPlayer) (changedOwner bool, roomBecameE
 		r.game.OnClientRemoved(client)
 	}
 
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
-	r.broadcastEvent(roomUpdatedEvent, nil)
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseClientRemoved}
+	r.broadcastEvent(roomUpdatedEvent, client)
 
 	nonBotsMembersNumber := 0
 	for ic := range r.members {
@@ -105,7 +104,7 @@ func (r *Room) addClient(client ClientPlayer) {
 		member.isPlayer = true
 	}
 
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseClientAdded}
 	r.broadcastEvent(roomUpdatedEvent, member.client)
 
 	roomJoinedEvent := &RoomJoinedEvent{r.toRoomInfo()}
@@ -121,7 +120,7 @@ func (r *Room) addBot(botClient ClientPlayer) {
 	r.members[member] = true
 	member.isPlayer = true
 
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseBotAdded}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
 	roomJoinedEvent := &RoomJoinedEvent{r.toRoomInfo()}
@@ -261,12 +260,12 @@ func (r *Room) onStartGameCommand(c ClientPlayer) {
 		}
 	}
 
-	r.game = r.lobby.newGameFunc(playersClients, func(event interface{}) {
+	r.game = r.lobby.newGameFunc(playersClients, r, func(event interface{}) {
 		r.broadcastEvent(event, nil)
 	})
 	go r.game.StartMainLoop()
 
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseGameStarted}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
 	gameStartedEvent := &GameStartedEvent{r.toRoomInfo()}
@@ -289,7 +288,7 @@ func (r *Room) onDeleteGameCommand(c ClientPlayer) {
 
 	r.game = nil
 
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseGameDeleted}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
 	r.lobby.sendRoomUpdate(r)
@@ -312,8 +311,7 @@ func (r *Room) onAddBotCommand(c ClientPlayer) {
 		return
 	}
 
-	botClient := r.createBot()
-	r.addBot(botClient)
+	r.createBot()
 }
 
 func (r *Room) createBot() ClientPlayer {
@@ -351,7 +349,6 @@ func (r *Room) onRemoveBotsCommand(c ClientPlayer) {
 }
 
 func (r *Room) onClientCommand(cc *ClientCommand) {
-	log.Println(cc.SubType)
 	switch cc.SubType {
 	case ClientCommandRoomSubTypeWantToPlay:
 		r.onWantToPlayCommand(cc.client)
@@ -375,13 +372,22 @@ func (r *Room) onClientCommand(cc *ClientCommand) {
 }
 
 func (r *Room) onGameStarted() {
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseGameStarted}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 	r.lobby.sendRoomUpdate(r)
 }
 
-func (r *Room) onGameEnded() {
-	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo()}
+func (r *Room) OnGameEnded() {
+	for rm := range r.members {
+		if rm.isBot {
+			rm.client.CloseConnection()
+			r.removeClient(rm.client)
+		}
+	}
+
+	r.game = nil
+
+	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseGameEnded}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 	r.lobby.sendRoomUpdate(r)
 }
@@ -402,12 +408,13 @@ func (r *Room) toRoomInList() *RoomInList {
 		gameStatus = r.game.Status()
 	}
 	roomInList := &RoomInList{
-		Id:         r.Id(),
+		Id:         r.ID(),
 		OwnerId:    r.owner.client.ID(),
 		Name:       r.Name(),
 		GameStatus: gameStatus,
 		MembersNum: len(r.members),
 	}
+
 	return roomInList
 }
 
@@ -424,12 +431,13 @@ func (r *Room) toRoomInfo() *RoomInfo {
 	}
 
 	roomInfo := &RoomInfo{
-		Id:         r.Id(),
+		Id:         r.ID(),
 		OwnerId:    r.owner.client.ID(),
 		Name:       r.Name(),
 		GameStatus: gameStatus,
 		Members:    membersInfo,
 		MaxPlayers: r.lobby.maxPlayersInRoom,
 	}
+
 	return roomInfo
 }

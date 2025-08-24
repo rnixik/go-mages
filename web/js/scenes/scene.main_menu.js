@@ -5,6 +5,9 @@ const MainMenu = function () {
     this.menuControls = null;
     this.menuBackground = null;
     this.loadingSpinner = null;
+    this.connectingText = null;
+    this.waitingForPlayersText = null;
+    this.addBotButton = null;
 
     const self = this;
     this.game = null;
@@ -29,6 +32,42 @@ const MainMenu = function () {
 
         this.loadingSpinner = game.add.sprite(400, 300, 'spinner');
         this.loadingSpinner.setVisible(false);
+
+        this.connectingText = this.game.make.text({
+            x: 10000,
+            y: 60,
+            text: "Connecting to the server...",
+            style: {
+                fontFamily: 'Arial',
+                color: '#ffffff',
+            },
+            add: true
+        });
+
+        this.waitingForPlayersText = this.game.make.text({
+            x: 10000,
+            y: 60,
+            text: "Waiting for players...",
+            style: {
+                fontFamily: 'Arial',
+                color: '#00bb00',
+            },
+            add: true
+        });
+        this.addBotButton = this.game.make.text({
+            x: 10000,
+            y: 80,
+            text: "Click here to play with bot",
+            style: {
+                fontFamily: 'Arial',
+                color: '#00bbbb',
+            },
+            add: true
+        });
+        this.addBotButton.setInteractive();
+        this.addBotButton.on('pointerdown', function () {
+            self.wsConnection.send(JSON.stringify({type: 'room', subType: 'addBot'}))
+        });
 
         const savedNickname = localStorage.getItem("nickname");
         if (savedNickname) {
@@ -65,6 +104,15 @@ const MainMenu = function () {
     };
 
     this.connectToServer = function() {
+        if (this.wsConnection) {
+            self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch'}));
+            this.waitingForPlayersText.x = 0;
+            this.addBotButton.x = 0;
+
+            return;
+        }
+
+        this.connectingText.x = 0;
         const wsConnect = (nickname) => {
             self.wsConnection = new WebSocket(WEBSOCKET_URL);
             self.wsConnection.onopen = function () {
@@ -99,9 +147,23 @@ const MainMenu = function () {
         console.log('INCOMING', json);
         if (json.name === 'ClientJoinedEvent') {
             this.myClientId = json.data.yourId;
+            console.log('My client id = ' + this.myClientId);
+            this.connectingText.x = 10000;
+            this.waitingForPlayersText.x = 0;
+            this.addBotButton.x = 0;
+            return;
+        }
+        if (json.name === 'RoomUpdatedEvent' && json.data.cause === 'botAdded') {
+            // handle case when we add bot and we want to start the game
+            if (json.data.room.members.length === 2 && json.data.room.gameStatus === "") {
+                console.log('send command to start the game')
+                self.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
+            }
             return;
         }
         if (json.name === 'GameStartedEvent') {
+            this.waitingForPlayersText.x = 10000;
+            this.addBotButton.x = 10000;
             self.startGame(this.myClientId, json.data.room.members);
             return;
         }

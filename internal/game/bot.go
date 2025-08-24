@@ -2,14 +2,14 @@ package game
 
 import (
 	"github.com/rnixik/go-mages/internal/lobby"
-	"log"
 	"math/rand"
 	"time"
 )
 
 type Bot struct {
-	botClient *BotClient
-	room      *lobby.Room
+	botClient          *BotClient
+	room               *lobby.Room
+	delayedCastCommand *CastCommand
 }
 
 func newBot(botClient *BotClient, room *lobby.Room) *Bot {
@@ -20,14 +20,17 @@ func newBot(botClient *BotClient, room *lobby.Room) *Bot {
 }
 
 func (b *Bot) run() {
-	ticker := time.NewTicker(1300 * time.Millisecond)
-	defer ticker.Stop()
+	attackTicker := time.NewTicker(1300 * time.Millisecond)
+	defer attackTicker.Stop()
+
+	defenseTicker := time.NewTicker(500 * time.Millisecond)
+	defer defenseTicker.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-attackTicker.C:
 			if b.room.Game() != nil && b.room.Game().Status() == StatusEnded {
-				return
+				break
 			}
 
 			random := rand.Intn(4)
@@ -44,14 +47,26 @@ func (b *Bot) run() {
 			}
 
 			b.botClient.sendCommandToGame("Cast", command)
+		case <-defenseTicker.C:
+			if b.room.Game() != nil && b.room.Game().Status() == StatusEnded {
+				break
+			}
+			if b.delayedCastCommand != nil {
+				b.botClient.sendCommandToGame("Cast", b.delayedCastCommand)
+				b.delayedCastCommand = nil
+			}
+
 		case event := <-b.botClient.incomingEvents:
+			if b.room.Game() != nil && b.room.Game().Status() == StatusEnded {
+				break
+			}
+
 			b.dispatchEvent(event)
 		}
 	}
 }
 
 func (b *Bot) dispatchEvent(event interface{}) {
-	log.Printf("BOT: got event to make decision: %+v\n", event)
 	castEvent, ok := event.(CastEvent)
 	if !ok {
 		return
@@ -59,5 +74,21 @@ func (b *Bot) dispatchEvent(event interface{}) {
 	if castEvent.OriginPlayerId == b.botClient.ID() {
 		return
 	}
-	log.Printf("BOT: got spell %s", castEvent.SpellId)
+
+	// cast shield spell after some delay
+
+	random := rand.Intn(4)
+	var command *CastCommand
+	switch random {
+	case 0:
+		command = &CastCommand{SpellShieldFireball}
+	case 1:
+		command = &CastCommand{SpellShieldLightning}
+	case 2:
+		command = &CastCommand{SpellShieldRocks}
+	case 3:
+		command = &CastCommand{SpellShieldComet}
+	}
+
+	b.delayedCastCommand = command
 }

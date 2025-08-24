@@ -2,8 +2,8 @@ package game
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/rnixik/go-mages/internal/lobby"
+	"log"
 	"sync"
 	"time"
 )
@@ -63,21 +63,24 @@ type Game struct {
 	status             string
 	broadcastEventFunc func(event interface{})
 	mutex              sync.Mutex
+	statusMx           sync.Mutex
+	room               *lobby.Room
 }
 
-func NewGame(playersClients []lobby.ClientPlayer, broadcastEventFunc func(event interface{})) *Game {
+func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) *Game {
 	players := make([]*Player, len(playersClients))
 	for i, client := range playersClients {
 		players[i] = newPlayer(client)
 	}
 
-	fmt.Printf("new game created: %s vs %s\n", players[0].client.Nickname(), players[1].client.Nickname())
+	log.Printf("new game created: %s vs %s\n", players[0].client.Nickname(), players[1].client.Nickname())
 
 	return &Game{
 		status:             StatusStarted,
 		players:            players,
 		broadcastEventFunc: broadcastEventFunc,
 		mutex:              sync.Mutex{},
+		room:               room,
 	}
 }
 
@@ -88,7 +91,7 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 	eventDataJson, ok := commandData.(json.RawMessage)
 	if !ok {
-		fmt.Printf("cannot decode event data for event name = %s\n", commandName)
+		log.Printf("cannot decode event data for event name = %s\n", commandName)
 		return
 	}
 
@@ -107,6 +110,9 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 }
 
 func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
+	if g.isGameEnded() {
+		return
+	}
 	winnerID := uint64(0)
 	for _, p := range g.players {
 		if p.client.ID() != client.ID() {
@@ -117,7 +123,7 @@ func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
 }
 
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
-	fmt.Printf("client '%s' joined game\n", client.Nickname())
+	log.Printf("client '%s' joined game\n", client.Nickname())
 }
 
 func (g *Game) StartMainLoop() {
@@ -142,8 +148,8 @@ func (g *Game) StartMainLoop() {
 }
 
 func (g *Game) Status() string {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	g.statusMx.Lock()
+	defer g.statusMx.Unlock()
 
 	return g.status
 }
@@ -178,8 +184,12 @@ func (g *Game) updatePlayerSpell(clientID uint64, spellId string) {
 }
 
 func (g *Game) endGame(winnerPlayerId uint64) {
+	g.statusMx.Lock()
 	g.status = StatusEnded
+	g.statusMx.Unlock()
+
 	g.broadcastEventFunc(EndGameEvent{WinnerPlayerId: winnerPlayerId})
+	g.room.OnGameEnded()
 }
 
 func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
@@ -257,5 +267,8 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 }
 
 func (g *Game) isGameEnded() bool {
+	g.statusMx.Lock()
+	defer g.statusMx.Unlock()
+
 	return g.status == StatusEnded
 }

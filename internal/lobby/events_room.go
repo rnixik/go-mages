@@ -26,7 +26,8 @@ type RoomJoinedEvent struct {
 
 // RoomUpdatedEvent contains info about updated room where client is
 type RoomUpdatedEvent struct {
-	Room *RoomInfo `json:"room"`
+	Room  *RoomInfo `json:"room"`
+	Cause string    `json:"cause"`
 }
 
 // GameStartedEvent broadcasted to all room members when game is started
@@ -49,3 +50,10 @@ type RoomSetPlayerStatusCommandData struct {
 	MemberId uint64 `json:"memberId"`
 	Status   bool   `json:"status"`
 }
+
+const RoomUpdatedCauseBotAdded = "botAdded"
+const RoomUpdatedCauseClientAdded = "clientAdded"
+const RoomUpdatedCauseClientRemoved = "clientRemoved"
+const RoomUpdatedCauseGameStarted = "gameStarted"
+const RoomUpdatedCauseGameDeleted = "gameDeleted"
+const RoomUpdatedCauseGameEnded = "gameEnded"

@@ -1,6 +1,8 @@
 package game
 
-import "github.com/rnixik/go-mages/internal/lobby"
+import (
+	"github.com/rnixik/go-mages/internal/lobby"
+)
 
 type MatchMaker struct {
 	waitingClient *lobby.ClientPlayer
@@ -16,7 +18,7 @@ func (mm *MatchMaker) MakeMatch(client lobby.ClientPlayer, foundFunc func(client
 	//foundFunc([]lobby.ClientPlayer{client, botClient})
 
 	// game with players
-	if mm.waitingClient != nil {
+	if mm.waitingClient != nil && (*mm.waitingClient).ID() != client.ID() {
 		foundFunc([]lobby.ClientPlayer{*mm.waitingClient, client})
 		mm.waitingClient = nil
 		return

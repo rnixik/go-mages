@@ -6,6 +6,7 @@ import (
 	"github.com/rnixik/go-mages/internal/lobby"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -38,7 +39,9 @@ type WebSocketClient struct {
 	conn *websocket.Conn
 
 	// Channel of outbound messages.
-	send chan []byte
+	send         chan []byte
+	sendIsClosed bool
+	mu           sync.Mutex
 
 	id uint64
 }
@@ -88,16 +91,22 @@ func (c *WebSocketClient) writeLoop() {
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Close()
+
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				c.Close()
+
 				return
 			}
 			_, _ = w.Write(message)
 
-			if err := w.Close(); err != nil {
+			if err2 := w.Close(); err2 != nil {
+				c.Close()
+
 				return
 			}
 		case <-ticker.C:
@@ -110,6 +119,13 @@ func (c *WebSocketClient) writeLoop() {
 }
 
 func (c *WebSocketClient) SendEvent(event interface{}) {
+	c.mu.Lock()
+	isClosed := c.sendIsClosed
+	c.mu.Unlock()
+
+	if isClosed {
+		return
+	}
 	jsonDataMessage, _ := eventToJSON(event)
 	if c.send == nil {
 		return
@@ -130,6 +146,14 @@ func (c *WebSocketClient) SetID(id uint64) {
 }
 
 func (c *WebSocketClient) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.sendIsClosed {
+		return
+	}
+
+	c.sendIsClosed = true
 	close(c.send)
 }
 
@@ -144,6 +168,7 @@ func ServeWebSocketRequest(lobby *lobby.Lobby, w http.ResponseWriter, r *http.Re
 		lobby: lobby,
 		conn:  conn,
 		send:  make(chan []byte),
+		mu:    sync.Mutex{},
 	}
 	client.lobby.RegisterTransportClient(client)
 

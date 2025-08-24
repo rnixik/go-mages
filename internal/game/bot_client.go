@@ -12,6 +12,7 @@ type BotClient struct {
 	incomingEvents   chan interface{}
 	outgoingCommands chan *GameBotCommandWithName
 	sendGameCommand  func(client lobby.ClientPlayer, commandType string, commandData json.RawMessage)
+	stopped          bool
 }
 
 type GameBotCommandWithName struct {
@@ -44,10 +45,16 @@ func NewBotClient(botId uint64, room *lobby.Room, sendGameCommand func(client lo
 }
 
 func (bc *BotClient) SendEvent(event interface{}) {
+	if bc.stopped {
+		return
+	}
 	bc.incomingEvents <- event
 }
 
 func (bc *BotClient) sendCommandToGame(commandType string, commandData interface{}) {
+	if bc.stopped {
+		return
+	}
 	// Game accepts type json.RawMessage for data, because it comes from web clients.
 	// To satisfy interface bot client should get json.RawMessage for commandData.
 	// To achieve this we encode to json and decode data back.
@@ -76,4 +83,8 @@ func (bc *BotClient) sendingCommandsToGame() {
 			bc.sendGameCommand(bc, botCommandWithName.commandName, botCommandWithName.commandData)
 		}
 	}
+}
+
+func (bc *BotClient) CloseConnection() {
+	bc.stopped = true
 }
