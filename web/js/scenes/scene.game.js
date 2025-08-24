@@ -220,6 +220,7 @@ GameScene.prototype = {
         setTimeout(function() {
             image.setInteractive();
             image.on('pointerdown', function () {
+                image.destroy(true, true);
                 _this.game.scene.switch('MainMenu');
             });
 
