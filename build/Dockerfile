@@ -18,5 +18,6 @@ WORKDIR /app
 COPY --from=builder /app/mages /app/
 COPY web /app/web
 COPY version /app/version
+RUN sed -i -e 's#//ws#wss://mages.getid.org/ws#g' /app/web/index.html
 EXPOSE 8009
 ENTRYPOINT ["./mages", "--addr=:8009"]
