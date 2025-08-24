@@ -1,6 +1,6 @@
 # Go mages! - an online multiplayer fighting game
 
-*Development is in progress*
+Check it here: [Mages!](https://mages.getid.org)
 
 ## License
 

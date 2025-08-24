@@ -1,0 +1,21 @@
+version: '3.5'
+
+services:
+  mages:
+    build:
+      context: ./../
+      dockerfile: ./build/Dockerfile
+
+    container_name: mages
+
+    networks:
+      - nginx-proxy
+    restart: always
+
+    environment:
+      VIRTUAL_HOST: "mages.getid.org"
+      LETSENCRYPT_HOST: "mages.getid.org"
+
+networks:
+  nginx-proxy:
+    external: true
