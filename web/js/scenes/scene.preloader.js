@@ -31,12 +31,14 @@ var sceneConfigPreloader = {
         this.load.image('icon_earth', 'assets/icons/earth256.png');
         this.load.image('icon_ice', 'assets/icons/ice256.png');
         this.load.image('icon_frame', 'assets/icons/frame256.png');
-        this.load.image('icon_frame_shield', 'assets/icons/shield256.png');
+        this.load.image('icon_frame_shield', 'assets/icons/shield_round.png');
         this.load.spritesheet('lightning', 'assets/lightning.png', { frameWidth: 196, frameHeight: 534 });
         this.load.spritesheet('fireball', 'assets/fireball.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('rocks', 'assets/rocks_animation_120.png', { frameWidth: 120, frameHeight: 172 });
         this.load.spritesheet('shield_animation', 'assets/shield_animation.png', { frameWidth: 256, frameHeight: 256 });
         this.load.audio('shield_reflected', 'assets/shield_reflected.mp3');
+        this.load.spritesheet('keys', 'assets/keys_48_58.png', { frameWidth: 48, frameHeight: 58 });
+        this.load.image('black_frame', 'assets/black_frame.png');
 
     },
     create: function() {

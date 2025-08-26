@@ -28,7 +28,7 @@ const StatusStarted = "started"
 const StatusEnded = "ended"
 
 // maxShieldCastDiffMs is the maximum time difference in milliseconds between the shield spell cast and the attack spell cast
-const maxShieldCastDiffMs = 600
+const maxShieldCastDiffMs = 900
 
 // attackCastDelayMs is the minimum time in milliseconds between two attack spell casts
 const attackCastDelayMs = 1000

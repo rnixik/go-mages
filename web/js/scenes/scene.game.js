@@ -9,6 +9,10 @@ const GameScene = function() {
     this.player1 = null;
     this.player2 = null ;
 
+    this.isDesktop = false;
+    this.spellPressed = false;
+    this.shieldPressed = false;
+
     this.spellButtons = [];
     this.castedSpells = [];
     this.game = null;
@@ -19,6 +23,7 @@ GameScene.prototype = {
     create: function(game, data) {
         const self = this;
 
+        this.isDesktop = game.scene.systems.game.device.os.desktop;
         this.myClientId = data.myClientId;
         this.myNickname = data.myNickname;
         this.opponentNickname = data.opponentNickname;
@@ -76,15 +81,16 @@ GameScene.prototype = {
         this.player2.stateDefault();
 
         this.spellButtons = this.game.add.group();
-        this.addSpellIcon('fireball', 15, 60, 'icon_fireball');
-        this.addSpellIcon('rocks', 94, 60, 'icon_earth');
-        this.addSpellIcon('lightning', 15, 140, 'icon_lightning');
-        this.addSpellIcon('comet', 94, 140, 'icon_ice');
+        this.addSpellIcon('fireball', 136, 120, 'icon_fireball');
+        this.addSpellIcon('rocks', 76, 180, 'icon_earth');
+        this.addSpellIcon('lightning', 76, 60, 'icon_lightning');
+        this.addSpellIcon('comet', 16, 120, 'icon_ice');
 
-        this.addSpellProtectionIcon('protect_fireball', game.cameras.main.width - 140, 50, 'icon_fireball');
-        this.addSpellProtectionIcon('protect_rocks', game.cameras.main.width - 75, 50, 'icon_earth');
-        this.addSpellProtectionIcon('protect_lightning', game.cameras.main.width - 140, 125, 'icon_lightning');
-        this.addSpellProtectionIcon('protect_comet', game.cameras.main.width - 75, 125, 'icon_ice');
+
+        this.addSpellProtectionIcon('protect_fireball', game.cameras.main.width - 136 - 62, 120, 'icon_fireball');
+        this.addSpellProtectionIcon('protect_rocks', game.cameras.main.width - 76 - 62, 180, 'icon_earth');
+        this.addSpellProtectionIcon('protect_lightning', game.cameras.main.width - 76 - 62, 60, 'icon_lightning');
+        this.addSpellProtectionIcon('protect_comet', game.cameras.main.width - 16 - 62, 120, 'icon_ice');
         //
         // this.onConnected();
     },
@@ -115,24 +121,108 @@ GameScene.prototype = {
         // });
     },
     addSpellIcon: function(spellId, x, y, spellIconResourceId) {
-        var spellIcon = this.game.add.sprite(x, y, spellIconResourceId).setOrigin(0, 0).setDisplaySize(64, 64);
-        this.game.add.sprite(x, y, 'icon_frame').setOrigin(0, 0).setDisplaySize(64, 64);
+        var spellIcon = this.game.add.sprite(x, y, spellIconResourceId).setOrigin(0, 0).setDisplaySize(60, 60);
+        this.game.add.sprite(x, y, 'icon_frame').setOrigin(0, 0).setDisplaySize(60, 60);
+
+        let frame = null;
+
         spellIcon.spellId = spellId;
         spellIcon.setInteractive();
         var self = this;
-        spellIcon.on('pointerdown', function () {
+        let onSpellClicked = function () {
+            if (self.spellPressed) {
+                return;
+            }
+            self.spellPressed = true;
             self.onIconClick(spellIcon);
-        });
+            frame = self.game.add.sprite(x+4, y+4, 'black_frame').setOrigin(0, 0).setDisplaySize(52, 52);
+            spellIcon.setPosition(x+4, y+4).setDisplaySize(52, 52);
+            setTimeout(function() {
+                spellIcon.setPosition(x, y).setDisplaySize(60, 60);
+                frame.destroy(true, true);
+                self.spellPressed = false;
+            }, 1000);
+        };
+
+        spellIcon.on('pointerdown', onSpellClicked);
+
+        if (this.isDesktop) {
+            let keyFrameIndex = 0;
+            let keyName = '';
+            switch (spellId) {
+                case 'lightning':
+                    keyFrameIndex = 3; // W
+                    keyName = 'W';
+                    break;
+                case 'comet':
+                    keyFrameIndex = 0; // A
+                    keyName = 'A';
+                    break;
+                case 'rocks':
+                    keyFrameIndex = 1; // S
+                    keyName = 'S';
+                    break;
+                case 'fireball':
+                    keyFrameIndex = 2; // D
+                    keyName = 'D';
+                    break;
+            }
+            this.game.add.sprite(x + 60 - 24 - 2, y + 60 - 24 - 2, 'keys', keyFrameIndex).setOrigin(0, 0).setDisplaySize(24, 24);
+
+            this.game.scene.scene.input.keyboard.on("keydown-" + keyName, function (event) {
+                onSpellClicked();
+            });
+        }
     },
     addSpellProtectionIcon: function(spellId, x, y, spellIconResourceId) {
-        this.game.add.sprite(x + 20, y + 20, spellIconResourceId).setOrigin(0, 0).setDisplaySize(20, 20);
-        let shieldIcon = this.game.add.sprite(x, y, 'icon_frame_shield').setOrigin(0, 0).setDisplaySize(64, 64);
+        let shieldIcon = this.game.add.sprite(x, y, 'icon_frame_shield').setOrigin(0, 0).setDisplaySize(62, 62);
+        let spellIcon = this.game.add.sprite(x + 16, y + 16, spellIconResourceId).setOrigin(0, 0).setDisplaySize(30, 30);
+        this.game.add.sprite(x + 16, y + 16, 'icon_frame').setOrigin(0, 0).setDisplaySize(30, 30);
         shieldIcon.spellId = spellId;
         shieldIcon.setInteractive();
         let self = this;
-        shieldIcon.on('pointerdown', function () {
+        let onShieldClicked = function () {
+            if (self.spellPressed) {
+                return;
+            }
+            self.spellPressed = true;
             self.onIconClick(shieldIcon);
-        });
+            spellIcon.setPosition(x + 16 + 4, y + 16 + 4).setDisplaySize(30 - 4, 30 - 4);
+            setTimeout(function() {
+                spellIcon.setPosition(x + 16, y + 16).setDisplaySize(30, 30);
+                self.spellPressed = false;
+            }, 900);
+        };
+
+        shieldIcon.on('pointerdown', onShieldClicked);
+
+        if (this.isDesktop) {
+            let keyFrameIndex = 0;
+            let keyName = '';
+            switch (spellId) {
+                case 'protect_lightning':
+                    keyFrameIndex = 7;
+                    keyName = 'I';
+                    break;
+                case 'protect_comet':
+                    keyFrameIndex = 6;
+                    keyName = 'L';
+                    break;
+                case 'protect_rocks':
+                    keyFrameIndex = 5;
+                    keyName = 'K';
+                    break;
+                case 'protect_fireball':
+                    keyFrameIndex = 4;
+                    keyName = 'J';
+                    break;
+            }
+            this.game.add.sprite(x + 60 - 24 - 2, y + 60 - 24 - 2, 'keys', keyFrameIndex).setOrigin(0, 0).setDisplaySize(24, 24);
+
+            this.game.scene.scene.input.keyboard.on("keydown-" + keyName, function (event) {
+                onShieldClicked();
+            });
+        }
     },
     onIconClick: function(icon) {
         if (icon.spellId) {
