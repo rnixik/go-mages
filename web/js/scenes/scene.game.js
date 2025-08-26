@@ -17,6 +17,9 @@ const GameScene = function() {
     this.castedSpells = [];
     this.game = null;
     this.sendGameCommand = function () {};
+
+    this.attackCooldownMs = 2000;
+    this.shieldCooldownMs = 900;
 };
 
 GameScene.prototype = {
@@ -137,11 +140,14 @@ GameScene.prototype = {
             self.onIconClick(spellIcon);
             frame = self.game.add.sprite(x+4, y+4, 'black_frame').setOrigin(0, 0).setDisplaySize(52, 52);
             spellIcon.setPosition(x+4, y+4).setDisplaySize(52, 52);
-            setTimeout(function() {
+
+            self.cooldownButton(spellIcon, self.attackCooldownMs);
+
+            self.game.time.delayedCall(self.attackCooldownMs, () => {
                 spellIcon.setPosition(x, y).setDisplaySize(60, 60);
-                frame.destroy(true, true);
+                frame && frame.destroy(true, true);
                 self.spellPressed = false;
-            }, 1000);
+            });
         };
 
         spellIcon.on('pointerdown', onSpellClicked);
@@ -182,16 +188,18 @@ GameScene.prototype = {
         shieldIcon.setInteractive();
         let self = this;
         let onShieldClicked = function () {
-            if (self.spellPressed) {
+            if (self.shieldPressed) {
                 return;
             }
-            self.spellPressed = true;
+            self.shieldPressed = true;
             self.onIconClick(shieldIcon);
             spellIcon.setPosition(x + 16 + 4, y + 16 + 4).setDisplaySize(30 - 4, 30 - 4);
-            setTimeout(function() {
-                spellIcon.setPosition(x + 16, y + 16).setDisplaySize(30, 30);
-                self.spellPressed = false;
-            }, 900);
+            self.cooldownButton(shieldIcon, self.shieldCooldownMs);
+            
+            self.game.time.delayedCall(self.shieldCooldownMs, () => {
+                spellIcon.setPosition(x+16, y+16).setDisplaySize(30, 30);
+                self.shieldPressed = false;
+            });
         };
 
         shieldIcon.on('pointerdown', onShieldClicked);
@@ -329,6 +337,14 @@ GameScene.prototype = {
                 this.onEndGame(data);
                 break;
         }
+    },
+    cooldownButton: function (sprite, ms) {
+        sprite.disableInteractive();
+        sprite.setTint(0x808080);
+        this.game.time.delayedCall(ms, () => {
+            sprite.setInteractive();
+            sprite.clearTint();
+        });
     }
 };
 

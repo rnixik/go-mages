@@ -31,7 +31,7 @@ const StatusEnded = "ended"
 const maxShieldCastDiffMs = 900
 
 // attackCastDelayMs is the minimum time in milliseconds between two attack spell casts
-const attackCastDelayMs = 1000
+const attackCastDelayMs = 2000
 
 // shieldCastDelay is the minimum time in milliseconds between two shield spell casts
 const shieldCastDelay = 900
