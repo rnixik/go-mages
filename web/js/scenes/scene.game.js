@@ -20,6 +20,7 @@ const GameScene = function() {
 
     this.attackCooldownMs = 2000;
     this.shieldCooldownMs = 900;
+    this.maxHp = 1000;
 };
 
 GameScene.prototype = {
@@ -293,17 +294,7 @@ GameScene.prototype = {
         if (this.myClientId === data.targetPlayerId) {
             targetPlayer = this.player1;
         }
-        targetPlayer.setHealthBar(data.targetPlayerHp / 100);
-    },
-    onPlayersUpdate: function(data) {
-        var pl1 = this.player1;
-        var pl2 = this.player2;
-        if (this.myPlayerIndex === 2) {
-            pl1 = this.player2;
-            pl2 = this.player1;
-        }
-        pl1.setHealthBar(data.hp1 / 100);
-        pl2.setHealthBar(data.hp2 / 100);
+        targetPlayer.setHealthBar(data.targetPlayerHp / this.maxHp);
     },
     onEndGame: function(data) {
         this.game.add.sprite(0, 0, 'black').setOrigin(0, 0).alpha = 0.9;

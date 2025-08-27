@@ -28,13 +28,15 @@ const StatusStarted = "started"
 const StatusEnded = "ended"
 
 // maxShieldCastDiffMs is the maximum time difference in milliseconds between the shield spell cast and the attack spell cast
-const maxShieldCastDiffMs = 900
+const maxShieldCastDiffMs = int64(900)
 
 // attackCastDelayMs is the minimum time in milliseconds between two attack spell casts
-const attackCastDelayMs = 2000
+const attackCastDelayMs = int64(2000)
 
-// shieldCastDelay is the minimum time in milliseconds between two shield spell casts
-const shieldCastDelay = 900
+// shieldCastDelayMs is the minimum time in milliseconds between two shield spell casts
+const shieldCastDelayMs = int64(900)
+
+const maxHP = 1000
 
 type Player struct {
 	client             lobby.ClientPlayer
@@ -54,7 +56,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		lastSpellId:    "",
 		lastCastTime:   time.Time{},
 		hasActiveSpell: false,
-		hp:             100,
+		hp:             maxHP,
 	}
 }
 
@@ -162,7 +164,7 @@ func (g *Game) updatePlayerSpell(clientID uint64, spellId string) {
 		if p.client.ID() == clientID {
 			_, isShield := shieldsMap[spellId]
 			if isShield {
-				if p.lastSpellIdShield != "" && now.Sub(p.lastCastTimeShield).Milliseconds() < shieldCastDelay {
+				if p.lastSpellIdShield != "" && now.Sub(p.lastCastTimeShield).Milliseconds() < shieldCastDelayMs {
 					return
 				}
 				p.lastSpellIdShield = spellId
@@ -226,7 +228,7 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 		p1.hasActiveSpell = false
 	}
 
-	damage := 10
+	damage := 100
 	var isShieldMatch bool
 
 	if p2.lastSpellIdShield != "" {
@@ -250,7 +252,7 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 			}
 
 			if isShieldMatch {
-				damage = 2
+				damage = int(shieldCastDiff / maxShieldCastDiffMs * 100)
 			}
 		}
 	}
