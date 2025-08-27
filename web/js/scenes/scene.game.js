@@ -290,6 +290,9 @@ GameScene.prototype = {
         if (data.shieldWorked) {
             this.game.sound.play('shield_reflected');
         }
+        else {
+            this.game.sound.play('damage_taken');
+        }
         let targetPlayer = this.player2;
         if (this.myClientId === data.targetPlayerId) {
             targetPlayer = this.player1;
