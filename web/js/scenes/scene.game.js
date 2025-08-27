@@ -20,6 +20,7 @@ const GameScene = function() {
 
     this.attackCooldownMs = 2000;
     this.shieldCooldownMs = 900;
+    this.maxShieldCastDiffMs = 900;
     this.maxHp = 1000;
 };
 
@@ -247,20 +248,19 @@ GameScene.prototype = {
         }
 
         let castingDuration = 400;
-        let prepareDuration = 300;
+        let prepareDuration = this.maxShieldCastDiffMs;
         let spell;
         switch (data.spellId) {
             case 'fireball':
                 spell = new FireballSpell();
-                prepareDuration = 200;
+                prepareDuration -= 400; // time to fly
                 break;
             case 'lightning':
                 spell = new LightningSpell();
-                castingDuration = 500;
                 break;
             case 'comet':
                 spell = new CometSpell();
-                prepareDuration = 200;
+                prepareDuration -= 400;  // time to fly
                 break;
             case 'rocks':
                 spell = new RocksSpell();
@@ -278,7 +278,7 @@ GameScene.prototype = {
         }
 
         originPlayer.stateDefault();
-        originPlayer.statePreparation(data.spellId, 400);
+        originPlayer.statePreparation(data.spellId, prepareDuration);
         let _this = this;
         setTimeout(function() {
             spell.cast(_this.game, originPlayer, targetPlayer);

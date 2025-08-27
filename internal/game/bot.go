@@ -21,10 +21,10 @@ func newBot(botClient *BotClient, room *lobby.Room) *Bot {
 }
 
 func (b *Bot) run() {
-	attackTicker := time.NewTicker(time.Duration(math.Round(float64(attackCastDelayMs)*1.2)) * time.Millisecond)
+	attackTicker := time.NewTicker(time.Duration(math.Round(float64(attackCooldownMs)*1.2)) * time.Millisecond)
 	defer attackTicker.Stop()
 
-	defenseTicker := time.NewTicker(time.Duration(math.Round(float64(shieldCastDelayMs)*1.1)) * time.Millisecond)
+	defenseTicker := time.NewTicker(time.Duration(math.Round(float64(shieldCooldownMs)*1.1)) * time.Millisecond)
 	defer defenseTicker.Stop()
 
 	for {
