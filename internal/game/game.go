@@ -41,6 +41,7 @@ const castPrepareDurationMs = maxShieldCastDiffMs
 
 const maxHP = 1000
 const baseDamage = 100
+const misShieldDamageMultiplier = 1.5
 
 type Player struct {
 	client             lobby.ClientPlayer
@@ -255,6 +256,8 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 
 			if isShieldMatch {
 				damage = int(float64(shieldCastDiff) / float64(maxShieldCastDiffMs) * float64(baseDamage))
+			} else {
+				damage = baseDamage * misShieldDamageMultiplier
 			}
 		}
 	}
