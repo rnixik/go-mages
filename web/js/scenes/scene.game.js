@@ -91,10 +91,10 @@ GameScene.prototype = {
         this.addSpellIcon('comet', 16, 120, 'icon_ice');
 
 
-        this.addSpellProtectionIcon('protect_fireball', game.cameras.main.width - 136 - 62, 120, 'icon_fireball');
+        this.addSpellProtectionIcon('protect_fireball', game.cameras.main.width - 16 - 62, 120, 'icon_fireball');
         this.addSpellProtectionIcon('protect_rocks', game.cameras.main.width - 76 - 62, 180, 'icon_earth');
         this.addSpellProtectionIcon('protect_lightning', game.cameras.main.width - 76 - 62, 60, 'icon_lightning');
-        this.addSpellProtectionIcon('protect_comet', game.cameras.main.width - 16 - 62, 120, 'icon_ice');
+        this.addSpellProtectionIcon('protect_comet', game.cameras.main.width - 136 - 62, 120, 'icon_ice');
         //
         // this.onConnected();
     },
@@ -214,16 +214,16 @@ GameScene.prototype = {
                     keyName = 'I';
                     break;
                 case 'protect_comet':
-                    keyFrameIndex = 6;
-                    keyName = 'L';
+                    keyFrameIndex = 4;
+                    keyName = 'J';
                     break;
                 case 'protect_rocks':
                     keyFrameIndex = 5;
                     keyName = 'K';
                     break;
                 case 'protect_fireball':
-                    keyFrameIndex = 4;
-                    keyName = 'J';
+                    keyFrameIndex = 6;
+                    keyName = 'L';
                     break;
             }
             this.game.add.sprite(x + 60 - 24 - 2, y + 60 - 24 - 2, 'keys', keyFrameIndex).setOrigin(0, 0).setDisplaySize(24, 24);
