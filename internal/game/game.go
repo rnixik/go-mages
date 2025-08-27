@@ -254,7 +254,7 @@ func (g *Game) checkAttackFromP1ToP2(p1 *Player, p2 *Player) {
 			}
 
 			if isShieldMatch {
-				damage = int(shieldCastDiff / maxShieldCastDiffMs * baseDamage)
+				damage = int(float64(shieldCastDiff) / float64(maxShieldCastDiffMs) * float64(baseDamage))
 			}
 		}
 	}
